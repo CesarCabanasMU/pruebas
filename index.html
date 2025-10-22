@@ -243,16 +243,11 @@
             // Abrir el chat completo después de 15 segundos si el usuario sigue en la página
             setTimeout(function() {
                 try {
-                    if (embeddedservice_bootstrap.utilAPI && embeddedservice_bootstrap.utilAPI.openWidget) {
-                        embeddedservice_bootstrap.utilAPI.openWidget();
-                        console.log('Chat abierto automáticamente después de 15 segundos');
-                    } else {
-                        console.log('utilAPI no disponible aún');
-                    }
+                    embeddedservice_bootstrap.utilAPI.openWidget();
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
                 }
-            }, 15000); // 15 segundos para abrir el chat completo
+            }, 1000); // 1 segundo para abrir el chat completo
            
         } catch (err) {
             console.error('Error loading Embedded Messaging: ', err);
