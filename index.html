@@ -190,7 +190,7 @@
 
     <div class="container">
         <div class="chat-notice">
-            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente. Si permaneces más de 15 segundos en la web, el chat se abrirá automáticamente.
+            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente. Si permaneces más de 10 segundos en la web, el chat se abrirá automáticamente.
         </div>
 
         <section class="hero" id="inicio">
@@ -247,7 +247,7 @@
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
                 }
-            }, 5000); // 5 segundos para abrir el chat completo
+            }, 10000); // 10 segundos para abrir el chat completo
            
         } catch (err) {
             console.error('Error loading Embedded Messaging: ', err);
