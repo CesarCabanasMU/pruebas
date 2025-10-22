@@ -3,237 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Seeds - Chatbot Salesforce</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            max-width: 800px;
-            padding: 40px;
-            text-align: center;
-            animation: slideIn 0.6s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        
-        .content {
-            margin: 30px 0;
-            line-height: 1.8;
-        }
-        
-        .info-box {
-            background: #f0f4ff;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-            text-align: left;
-        }
-        
-        .timer {
-            font-size: 1.2em;
-            color: #764ba2;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-        
-        .button-group {
-            margin-top: 30px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1em;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        
-        button:hover {
-            background: #764ba2;
-        }
-        
-        button.secondary {
-            background: #6c757d;
-        }
-        
-        button.secondary:hover {
-            background: #5a6268;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #999;
-            font-size: 0.9em;
-        }
-    </style>
+    <title>Mi Página Web</title>
 </head>
 <body>
-    <div class="container">
-        <h1>🚀 GitHub Seeds</h1>
-        <p class="subtitle">Chatbot Salesforce - Demo</p>
-        
-        <div class="content">
-            <p>¡Bienvenido! Somos GitHub Seeds, tu solución empresarial integrada con Salesforce.</p>
-            
-            <div class="info-box">
-                <strong>💡 Nota:</strong> El chatbot se abrirá automáticamente en <span class="timer" id="countdown">10 segundos</span>
-            </div>
-            
-            <p>Estamos aquí para ayudarte con cualquier pregunta sobre nuestros servicios. Nuestro equipo de soporte está listo para asistirte 24/7.</p>
-            
-            <div class="info-box">
-                <strong>✨ Características:</strong>
-                <ul style="margin-top: 10px; text-align: left;">
-                    <li>Soporte en tiempo real</li>
-                    <li>Integración con Salesforce</li>
-                    <li>Disponibilidad 24/7</li>
-                    <li>Respuestas personalizadas</li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="button-group">
-            <button onclick="openChatbot()">📞 Abrir Chat Ahora</button>
-            <button class="secondary" onclick="closeChatbot()">❌ Cerrar Chat</button>
-        </div>
-        
-        <div class="footer">
-            <p>&copy; 2025 GitHub Seeds. Todos los derechos reservados.</p>
-        </div>
-    </div>
-
-    <!-- Script de Salesforce Embedded Messaging -->
+    <h1>EXTERNAL WEBSITE TEST ADOBE</h1>
     <script type='text/javascript'>
-        // Inicializar configuración de Salesforce
-        window.embeddedservice_bootstrap = window.embeddedservice_bootstrap || {};
-        embeddedservice_bootstrap.settings = embeddedservice_bootstrap.settings || {};
-        
-        // Configurar idioma
-        embeddedservice_bootstrap.settings.language = 'en_US';
-        
-        // Inicializar Embedded Service
-        embeddedservice_bootstrap.init(
-            '00Dbd000000XkCn',
-            'Github_Messaging_Setting',
-            'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
-            {
-                scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
-            }
-        );
-    </script>
-
-    <!-- Cargar script de bootstrap de Salesforce -->
-    <script type='text/javascript' src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js'></script>
-
-    <!-- Script personalizado para abrir el chatbot después de 10 segundos -->
-    <script>
-        let contadorSegundos = 10;
-        let chatbotAbierto = false;
-
-        // Función para abrir el chatbot
-        function openChatbot() {
-            if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
-                embeddedservice_bootstrap.utilAPI.openWidget();
-                chatbotAbierto = true;
-                console.log('Chatbot abierto');
-            } else {
-                console.warn('Salesforce Embedded Service no está completamente cargado');
-            }
-        }
-
-        // Función para cerrar el chatbot
-        function closeChatbot() {
-            if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.utilAPI) {
-                embeddedservice_bootstrap.utilAPI.closeWidget();
-                chatbotAbierto = false;
-                console.log('Chatbot cerrado');
-            }
-        }
-
-        // Esperar a que el documento esté listo
-        document.addEventListener('DOMContentLoaded', function() {
-            // Iniciar countdown de 10 segundos
-            const countdownInterval = setInterval(function() {
-                contadorSegundos--;
-                
-                const timerElement = document.getElementById('countdown');
-                if (timerElement) {
-                    timerElement.textContent = contadorSegundos + ' segundos';
-                }
-
-                if (contadorSegundos <= 0) {
-                    clearInterval(countdownInterval);
-                    
-                    // Esperar a que Salesforce esté cargado
-                    const maxIntentosEspera = 20; // 10 segundos más (500ms * 20)
-                    let intentosEspera = 0;
-
-                    const esperarSalesforce = setInterval(function() {
-                        if (typeof embeddedservice_bootstrap !== 'undefined' && 
-                            embeddedservice_bootstrap.utilAPI) {
-                            clearInterval(esperarSalesforce);
-                            openChatbot();
-                        } else if (intentosEspera < maxIntentosEspera) {
-                            intentosEspera++;
+    function initEmbeddedMessaging() {
+        // Añadir timeout de 10 segundos antes de mostrar el agente
+        setTimeout(function() {
+            try {
+                embeddedservice_bootstrap.settings.language = 'en_US'; // For example, enter 'en' or 'en-US'
+ 
+                embeddedservice_bootstrap.init(
+                    '00Dbd000000XkCn',
+                    'Github_Messaging_Setting',
+                    'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
+                    {
+                        scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
+                    }
+                );
+               
+                console.log('Agente de chat cargado después de 10 segundos');
+               
+                // Abrir el chat automáticamente después de que se inicialice
+                setTimeout(function() {
+                    try {
+                        if (embeddedservice_bootstrap.utilAPI && embeddedservice_bootstrap.utilAPI.openWidget) {
+                            embeddedservice_bootstrap.utilAPI.openWidget();
+                            console.log('Chat abierto automáticamente');
                         } else {
-                            clearInterval(esperarSalesforce);
-                            console.warn('Timeout: No se pudo cargar Salesforce Embedded Service');
+                            console.log('utilAPI no disponible aún');
                         }
-                    }, 500);
-                }
-            }, 1000);
-        });
-    </script>
+                    } catch (err) {
+                        console.error('Error abriendo el chat: ', err);
+                    }
+                }, 7000); // 2 segundos adicionales para que se cargue completamente
+               
+            } catch (err) {
+                console.error('Error loading Embedded Messaging: ', err);
+            }
+        }, 10000); // 10000 milisegundos = 10 segundos
+    };
+</script>
+<script type='text/javascript' src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js%27' onload='initEmbeddedMessaging()'></script>
  
 </body>
 </html>
