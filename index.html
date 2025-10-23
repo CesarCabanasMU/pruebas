@@ -190,7 +190,7 @@
 
     <div class="container">
         <div class="chat-notice">
-            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente. Si permaneces más de 10 segundos en la web, el chat se abrirá automáticamente.
+            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente en la esquina inferior derecha. Haz click en ella para abrir una conversación.
         </div>
 
         <section class="hero" id="inicio">
@@ -225,7 +225,6 @@
 
     <script type='text/javascript'>
     function initEmbeddedMessaging() {
-        // Inicializar el chat inmediatamente pero sin abrirlo
         try {
             embeddedservice_bootstrap.settings.language = 'en_US';
 
@@ -238,100 +237,10 @@
                 }
             );
            
-            console.log('Agente de chat inicializado - burbuja visible');
-
-            // Abrir el chat completo después de 10 segundos si el usuario sigue en la página
-            setTimeout(function() {
-                try {
-                    console.log('Iniciando proceso para abrir chat nuevo...');
-                    
-                    // 1. Terminar sesión anterior limpiando datos
-                    console.log('1. Limpiando sesión anterior...');
-                    
-                    // Limpiar localStorage
-                    const keysToRemove = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && (key.includes('chat') || key.includes('messaging') || key.includes('salesforce'))) {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    keysToRemove.forEach(key => localStorage.removeItem(key));
-                    console.log('✓ Datos de localStorage limpiados');
-                    
-                    // Limpiar sessionStorage
-                    const sessionKeysToRemove = [];
-                    for (let i = 0; i < sessionStorage.length; i++) {
-                        const key = sessionStorage.key(i);
-                        if (key && (key.includes('chat') || key.includes('messaging') || key.includes('salesforce'))) {
-                            sessionKeysToRemove.push(key);
-                        }
-                    }
-                    sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
-                    console.log('✓ Datos de sessionStorage limpiados');
-                    
-                    // 2. Remover y recrear el iframe para forzar nueva sesión
-                    console.log('2. Recreando el chat...');
-                    const oldFrame = document.getElementById('embeddedMessagingFrame');
-                    if (oldFrame) {
-                        oldFrame.parentElement.removeChild(oldFrame);
-                        console.log('✓ Iframe anterior removido');
-                    }
-                    
-                    // 3. Reinicializar embeddedservice_bootstrap
-                    console.log('3. Reinicializando embeddedservice_bootstrap...');
-                    if (window.embeddedservice_bootstrap) {
-                        // Limpiar configuración anterior
-                        embeddedservice_bootstrap.settings = {};
-                        embeddedservice_bootstrap.settings.language = 'en_US';
-                        
-                        // Reinicializar
-                        embeddedservice_bootstrap.init(
-                            '00Dbd000000XkCn',
-                            'Github_Messaging_Setting',
-                            'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
-                            {
-                                scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
-                            }
-                        );
-                        console.log('✓ embeddedservice_bootstrap reinicializado');
-                    }
-                    
-                    // 4. Esperar a que se cree el nuevo iframe y abrirlo
-                    setTimeout(function() {
-                        console.log('4. Abriendo nuevo chat...');
-                        const newFrame = document.getElementById('embeddedMessagingFrame');
-                        const chatContainer = document.getElementById('embedded-messaging');
-                        
-                        if (newFrame && chatContainer) {
-                            // Remover clase isMinimized
-                            newFrame.classList.remove('isMinimized');
-                            newFrame.classList.add('isMaximized');
-                            
-                            // Hacer visible
-                            newFrame.style.display = 'block';
-                            newFrame.style.visibility = 'visible';
-                            
-                            chatContainer.style.display = 'block';
-                            chatContainer.style.visibility = 'visible';
-                            
-                            console.log('✓ Chat nuevo abierto');
-                            console.log('Estado final:', {
-                                frameClass: newFrame.className,
-                                display: newFrame.style.display
-                            });
-                        } else {
-                            console.log('❌ No se encontró nuevo iframe');
-                        }
-                    }, 1500); // Esperar a que se cree el nuevo iframe
-                    
-                } catch (err) {
-                    console.error('Error en proceso de chat: ', err);
-                }
-            }, 10000); // 10 segundos para iniciar el proceso
+            console.log('✓ Chat de Salesforce inicializado correctamente');
            
         } catch (err) {
-            console.error('Error loading Embedded Messaging: ', err);
+            console.error('Error al inicializar el chat: ', err);
         }
     };
     </script>
