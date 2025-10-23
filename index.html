@@ -227,7 +227,7 @@
     function initEmbeddedMessaging() {
         // Inicializar el chat inmediatamente pero sin abrirlo
         try {
-            embeddedservice_bootstrap.settings.language = 'en_US'; // For example, enter 'en' or 'en-US'
+            embeddedservice_bootstrap.settings.language = 'en_US';
 
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
@@ -240,14 +240,31 @@
            
             console.log('Agente de chat inicializado - burbuja visible');
 
-            // Abrir el chat completo después de 15 segundos si el usuario sigue en la página
+            // Abrir el chat completo después de 10 segundos si el usuario sigue en la página
             setTimeout(function() {
                 try {
-                    embeddedservice_bootstrap.utilAPI.openWidget();
+                    // Intentar abrir usando diferentes métodos
+                    if (embeddedservice_bootstrap.utilAPI) {
+                        console.log('utilAPI disponible, intentando abrir widget');
+                        if (typeof embeddedservice_bootstrap.utilAPI.openWidget === 'function') {
+                            embeddedservice_bootstrap.utilAPI.openWidget();
+                            console.log('Chat abierto con openWidget()');
+                        } else if (typeof embeddedservice_bootstrap.utilAPI.setChatVisible === 'function') {
+                            embeddedservice_bootstrap.utilAPI.setChatVisible(true);
+                            console.log('Chat abierto con setChatVisible(true)');
+                        } else {
+                            console.log('Métodos disponibles en utilAPI:', Object.keys(embeddedservice_bootstrap.utilAPI));
+                        }
+                    } else if (embeddedservice_bootstrap.showChat) {
+                        console.log('Usando showChat()');
+                        embeddedservice_bootstrap.showChat(true);
+                    } else {
+                        console.log('embeddedservice_bootstrap:', Object.keys(embeddedservice_bootstrap));
+                    }
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
                 }
-            }, 20000); // 10 segundos para abrir el chat completo
+            }, 10000); // 10 segundos para abrir el chat completo
            
         } catch (err) {
             console.error('Error loading Embedded Messaging: ', err);
