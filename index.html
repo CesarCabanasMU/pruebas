@@ -245,14 +245,36 @@
                 try {
                     console.log('Intentando abrir el chat...');
                     
-                    // Buscar el botón del chat y hacer click en él
+                    // Buscar el botón del chat
                     const chatButton = document.getElementById('embeddedMessagingConversationButton');
                     if (chatButton) {
-                        console.log('Botón encontrado, haciendo click...');
+                        console.log('Botón encontrado');
+                        console.log('Clase del botón:', chatButton.className);
+                        console.log('Display del botón:', window.getComputedStyle(chatButton).display);
+                        
+                        // Hacer click con múltiples intentos
+                        chatButton.focus();
+                        chatButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+                        chatButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
                         chatButton.click();
-                        console.log('✓ Chat abierto por click en botón');
+                        
+                        console.log('✓ Click enviado al botón');
+                        
+                        // Verificar el estado del iframe después del click
+                        setTimeout(function() {
+                            const frame = document.getElementById('embeddedMessagingFrame');
+                            if (frame) {
+                                console.log('Estado iframe:', {
+                                    className: frame.className,
+                                    display: window.getComputedStyle(frame).display
+                                });
+                            }
+                        }, 500);
                     } else {
                         console.log('❌ Botón del chat no encontrado');
+                        // Listar todos los elementos que contienen "chat" o "messaging"
+                        const allElements = document.querySelectorAll('[id*="chat"], [id*="messaging"]');
+                        console.log('Elementos relacionados encontrados:', Array.from(allElements).map(e => e.id));
                     }
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
