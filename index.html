@@ -243,31 +243,16 @@
             // Abrir el chat completo después de 10 segundos si el usuario sigue en la página
             setTimeout(function() {
                 try {
-                    // Usar utilAPI para abrir el widget
-                    if (embeddedservice_bootstrap.utilAPI) {
-                        console.log('utilAPI disponible, métodos:', Object.keys(embeddedservice_bootstrap.utilAPI));
-                        
-                        // Intentar los métodos conocidos de Salesforce
-                        if (typeof embeddedservice_bootstrap.utilAPI.openWidget === 'function') {
-                            embeddedservice_bootstrap.utilAPI.openWidget();
-                            console.log('✓ Chat abierto con openWidget()');
-                        } else if (typeof embeddedservice_bootstrap.utilAPI.minimizeWidget === 'function') {
-                            // Si minimizeWidget existe, maximizeWidget probablemente también
-                            embeddedservice_bootstrap.utilAPI.maximizeWidget();
-                            console.log('✓ Chat abierto con maximizeWidget()');
-                        } else {
-                            console.log('❌ Ningún método de apertura disponible');
-                            console.log('Intentando manipular el DOM directamente...');
-                            
-                            // Manipular el DOM directamente como respaldo
-                            const frame = document.getElementById('embeddedMessagingFrame');
-                            if (frame) {
-                                frame.classList.remove('isMinimized');
-                                console.log('✓ Chat visible manipulando clases CSS');
-                            }
-                        }
+                    console.log('Intentando abrir el chat...');
+                    
+                    // Buscar el botón del chat y hacer click en él
+                    const chatButton = document.getElementById('embeddedMessagingConversationButton');
+                    if (chatButton) {
+                        console.log('Botón encontrado, haciendo click...');
+                        chatButton.click();
+                        console.log('✓ Chat abierto por click en botón');
                     } else {
-                        console.log('❌ utilAPI no disponible');
+                        console.log('❌ Botón del chat no encontrado');
                     }
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
