@@ -243,10 +243,31 @@
             // Abrir el chat completo después de 10 segundos si el usuario sigue en la página
             setTimeout(function() {
                 try {
-                    // Intentar abrir usando diferentes métodos
+                    // Usar utilAPI para abrir el widget
                     if (embeddedservice_bootstrap.utilAPI) {
-                        embeddedservice_bootstrap.showChat(true);
-                        console.log('embeddedservice_bootstrap:', Object.keys(embeddedservice_bootstrap));
+                        console.log('utilAPI disponible, métodos:', Object.keys(embeddedservice_bootstrap.utilAPI));
+                        
+                        // Intentar los métodos conocidos de Salesforce
+                        if (typeof embeddedservice_bootstrap.utilAPI.openWidget === 'function') {
+                            embeddedservice_bootstrap.utilAPI.openWidget();
+                            console.log('✓ Chat abierto con openWidget()');
+                        } else if (typeof embeddedservice_bootstrap.utilAPI.minimizeWidget === 'function') {
+                            // Si minimizeWidget existe, maximizeWidget probablemente también
+                            embeddedservice_bootstrap.utilAPI.maximizeWidget();
+                            console.log('✓ Chat abierto con maximizeWidget()');
+                        } else {
+                            console.log('❌ Ningún método de apertura disponible');
+                            console.log('Intentando manipular el DOM directamente...');
+                            
+                            // Manipular el DOM directamente como respaldo
+                            const frame = document.getElementById('embeddedMessagingFrame');
+                            if (frame) {
+                                frame.classList.remove('isMinimized');
+                                console.log('✓ Chat visible manipulando clases CSS');
+                            }
+                        }
+                    } else {
+                        console.log('❌ utilAPI no disponible');
                     }
                 } catch (err) {
                     console.error('Error abriendo el chat: ', err);
