@@ -243,47 +243,92 @@
             // Abrir el chat completo después de 10 segundos si el usuario sigue en la página
             setTimeout(function() {
                 try {
-                    console.log('Intentando abrir el chat...');
+                    console.log('Iniciando proceso para abrir chat nuevo...');
                     
-                    // Buscar el elemento contenedor del chat
-                    const embeddedMessaging = document.getElementById('embedded-messaging');
-                    const chatFrame = document.getElementById('embeddedMessagingFrame');
-                    const chatButton = document.querySelector('[id*="Conversation"][role="button"]') || 
-                                      document.getElementById('embeddedMessagingConversationButton');
+                    // 1. Terminar sesión anterior limpiando datos
+                    console.log('1. Limpiando sesión anterior...');
                     
-                    if (chatFrame) {
-                        console.log('Estado actual del iframe:', chatFrame.className);
-                        
-                        // Intentar múltiples métodos
-                        // 1. Remover isMinimized
-                        if (chatFrame.classList.contains('isMinimized')) {
-                            chatFrame.classList.remove('isMinimized');
-                            console.log('✓ Removida clase isMinimized');
+                    // Limpiar localStorage
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.includes('chat') || key.includes('messaging') || key.includes('salesforce'))) {
+                            keysToRemove.push(key);
                         }
-                        
-                        // 2. Agregar clases que indiquen estado abierto
-                        chatFrame.classList.add('isMaximized');
-                        console.log('✓ Agregada clase isMaximized');
-                        
-                        // 3. Disparar eventos en el contenedor padre
-                        if (embeddedMessaging) {
-                            embeddedMessaging.dispatchEvent(new Event('maximize'));
-                            embeddedMessaging.dispatchEvent(new Event('open'));
-                            console.log('✓ Disparados eventos en contenedor');
-                        }
-                        
-                        // 4. Intentar hacer visible forzadamente
-                        chatFrame.style.display = 'block !important';
-                        chatFrame.style.visibility = 'visible !important';
-                        
-                        console.log('Estado final:', chatFrame.className);
-                    } else {
-                        console.log('❌ iframe del chat no encontrado');
                     }
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    console.log('✓ Datos de localStorage limpiados');
+                    
+                    // Limpiar sessionStorage
+                    const sessionKeysToRemove = [];
+                    for (let i = 0; i < sessionStorage.length; i++) {
+                        const key = sessionStorage.key(i);
+                        if (key && (key.includes('chat') || key.includes('messaging') || key.includes('salesforce'))) {
+                            sessionKeysToRemove.push(key);
+                        }
+                    }
+                    sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+                    console.log('✓ Datos de sessionStorage limpiados');
+                    
+                    // 2. Remover y recrear el iframe para forzar nueva sesión
+                    console.log('2. Recreando el chat...');
+                    const oldFrame = document.getElementById('embeddedMessagingFrame');
+                    if (oldFrame) {
+                        oldFrame.parentElement.removeChild(oldFrame);
+                        console.log('✓ Iframe anterior removido');
+                    }
+                    
+                    // 3. Reinicializar embeddedservice_bootstrap
+                    console.log('3. Reinicializando embeddedservice_bootstrap...');
+                    if (window.embeddedservice_bootstrap) {
+                        // Limpiar configuración anterior
+                        embeddedservice_bootstrap.settings = {};
+                        embeddedservice_bootstrap.settings.language = 'en_US';
+                        
+                        // Reinicializar
+                        embeddedservice_bootstrap.init(
+                            '00Dbd000000XkCn',
+                            'Github_Messaging_Setting',
+                            'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
+                            {
+                                scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
+                            }
+                        );
+                        console.log('✓ embeddedservice_bootstrap reinicializado');
+                    }
+                    
+                    // 4. Esperar a que se cree el nuevo iframe y abrirlo
+                    setTimeout(function() {
+                        console.log('4. Abriendo nuevo chat...');
+                        const newFrame = document.getElementById('embeddedMessagingFrame');
+                        const chatContainer = document.getElementById('embedded-messaging');
+                        
+                        if (newFrame && chatContainer) {
+                            // Remover clase isMinimized
+                            newFrame.classList.remove('isMinimized');
+                            newFrame.classList.add('isMaximized');
+                            
+                            // Hacer visible
+                            newFrame.style.display = 'block';
+                            newFrame.style.visibility = 'visible';
+                            
+                            chatContainer.style.display = 'block';
+                            chatContainer.style.visibility = 'visible';
+                            
+                            console.log('✓ Chat nuevo abierto');
+                            console.log('Estado final:', {
+                                frameClass: newFrame.className,
+                                display: newFrame.style.display
+                            });
+                        } else {
+                            console.log('❌ No se encontró nuevo iframe');
+                        }
+                    }, 1500); // Esperar a que se cree el nuevo iframe
+                    
                 } catch (err) {
-                    console.error('Error abriendo el chat: ', err);
+                    console.error('Error en proceso de chat: ', err);
                 }
-            }, 10000); // 10 segundos para abrir el chat completo
+            }, 10000); // 10 segundos para iniciar el proceso
            
         } catch (err) {
             console.error('Error loading Embedded Messaging: ', err);
