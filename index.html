@@ -629,16 +629,89 @@ Timestamp: ${context.timestamp}`;
             // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // ⭐ CONFIGURAR DATOS DE PRECHAT CON CONTEXTO DE LA PÁGINA ⭐
-            embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
-                { label: "Page_Title__c", value: initialContext.pageTitle, displayToAgent: true },
-                { label: "Page_URL__c", value: initialContext.pageUrl, displayToAgent: true },
-                { label: "Page_Section__c", value: initialContext.pageSection, displayToAgent: true },
-                { label: "Referrer__c", value: initialContext.referrer, displayToAgent: true },
-                { label: "User_Language__c", value: initialContext.language, displayToAgent: true }
+            // ⭐⭐⭐ CONFIGURACIÓN COMPLETA DE PRECHAT DATA ⭐⭐⭐
+            
+            // extraPrechatInfo: Define QUÉ datos enviar (entityName es CRUCIAL)
+            embeddedservice_bootstrap.settings.extraPrechatInfo = [
+                {
+                    "entityName": "MessagingSession",
+                    "showOnCreate": true,
+                    "entityFieldMaps": [
+                        {
+                            "doCreate": true,
+                            "doFind": false,
+                            "fieldName": "Page_Title__c",
+                            "isExactMatch": true,
+                            "label": "Page_Title__c"
+                        },
+                        {
+                            "doCreate": true,
+                            "doFind": false,
+                            "fieldName": "Page_URL__c",
+                            "isExactMatch": true,
+                            "label": "Page_URL__c"
+                        },
+                        {
+                            "doCreate": true,
+                            "doFind": false,
+                            "fieldName": "Page_Section__c",
+                            "isExactMatch": true,
+                            "label": "Page_Section__c"
+                        },
+                        {
+                            "doCreate": true,
+                            "doFind": false,
+                            "fieldName": "Referrer__c",
+                            "isExactMatch": true,
+                            "label": "Referrer__c"
+                        },
+                        {
+                            "doCreate": true,
+                            "doFind": false,
+                            "fieldName": "User_Language__c",
+                            "isExactMatch": true,
+                            "label": "User_Language__c"
+                        }
+                    ]
+                }
             ];
             
-            console.log('📋 Prechat data configurado:', embeddedservice_bootstrap.settings.extraPrechatFormDetails);
+            // extraPrechatFormDetails: Define los VALORES de los campos
+            embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
+                {
+                    "label": "Page_Title__c",
+                    "value": initialContext.pageTitle,
+                    "displayToAgent": true,
+                    "transcriptFields": ["Page_Title__c"]
+                },
+                {
+                    "label": "Page_URL__c",
+                    "value": initialContext.pageUrl,
+                    "displayToAgent": true,
+                    "transcriptFields": ["Page_URL__c"]
+                },
+                {
+                    "label": "Page_Section__c",
+                    "value": initialContext.pageSection,
+                    "displayToAgent": true,
+                    "transcriptFields": ["Page_Section__c"]
+                },
+                {
+                    "label": "Referrer__c",
+                    "value": initialContext.referrer,
+                    "displayToAgent": true,
+                    "transcriptFields": ["Referrer__c"]
+                },
+                {
+                    "label": "User_Language__c",
+                    "value": initialContext.language,
+                    "displayToAgent": true,
+                    "transcriptFields": ["User_Language__c"]
+                }
+            ];
+            
+            console.log('📋 ✅ Prechat Info (Mapping):', embeddedservice_bootstrap.settings.extraPrechatInfo);
+            console.log('📋 ✅ Prechat Form Details (Values):', embeddedservice_bootstrap.settings.extraPrechatFormDetails);
 
             // Inicializar el servicio
             embeddedservice_bootstrap.init(
@@ -651,7 +724,7 @@ Timestamp: ${context.timestamp}`;
             );
            
             console.log('✓ Chat de Salesforce inicializado correctamente');
-            console.log('✓ Datos de contexto configurados para el agente');
+            console.log('✓ Datos de contexto COMPLETOS configurados para el agente');
            
         } catch (err) {
             console.error('❌ Error al inicializar el chat:', err);
