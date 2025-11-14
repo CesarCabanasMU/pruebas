@@ -339,6 +339,14 @@
     // En producción, cargarías el SDK real desde tu cuenta de MC Personalization
     window.SalesforceInteractions = window.SalesforceInteractions || {
         events: [],
+        ConsentPurpose: {
+            Tracking: 'tracking',
+            Personalization: 'personalization'
+        },
+        ConsentStatus: {
+            OptIn: 'optin',
+            OptOut: 'optout'
+        },
         init: function(config) {
             this.config = config;
             console.log('✓ Salesforce Interactions inicializado:', config);
@@ -588,78 +596,6 @@
         try {
             // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
-            
-            // ⭐ CAPTURAR EVENTOS DEL CHAT PARA OBTENER SESSION ID ⭐
-            
-            // Evento cuando el chat está listo
-            embeddedservice_bootstrap.addEventHandler("onChatRequestSuccess", function(data) {
-                console.log('🔍 Datos del chat recibidos:', data);
-                
-                // Capturar el conversationEntryId (el ID real de la conversación)
-                if (data && data.conversationEntryId) {
-                    currentChatSessionId = data.conversationEntryId;
-                    trackChatOpen(data.conversationEntryId);
-                    sendContextToChat(data.conversationEntryId);
-                    updateContextDisplay(); // Actualizar el display inmediatamente
-                    console.log('✅ Conversation Entry ID capturado:', data.conversationEntryId);
-                } 
-                // Fallback a sessionId si existe
-                else if (data && data.sessionId) {
-                    currentChatSessionId = data.sessionId;
-                    trackChatOpen(data.sessionId);
-                    sendContextToChat(data.sessionId);
-                    updateContextDisplay();
-                    console.log('✅ Session ID capturado:', data.sessionId);
-                } 
-                // Fallback a chatKey si existe
-                else if (data && data.chatKey) {
-                    currentChatSessionId = data.chatKey;
-                    trackChatOpen(data.chatKey);
-                    sendContextToChat(data.chatKey);
-                    updateContextDisplay();
-                    console.log('✅ Chat Key capturado:', data.chatKey);
-                }
-            });
-            
-            // Evento cuando se envía un mensaje
-            embeddedservice_bootstrap.addEventHandler("onChatMessage", function(data) {
-                console.log('💬 Mensaje de chat:', data);
-                if (data && data.message && data.message.text) {
-                    trackChatMessage(data.message.text, currentChatSessionId);
-                }
-            });
-            
-            // Evento cuando se establece la conversación
-            embeddedservice_bootstrap.addEventHandler("onConversationStart", function(data) {
-                console.log('🚀 Conversación iniciada:', data);
-                if (data && data.conversationEntryId && !currentChatSessionId) {
-                    currentChatSessionId = data.conversationEntryId;
-                    trackChatOpen(data.conversationEntryId);
-                    sendContextToChat(data.conversationEntryId);
-                    updateContextDisplay();
-                    console.log('✅ Conversation Entry ID de onConversationStart:', data.conversationEntryId);
-                }
-            });
-            
-            // Evento cuando termina la conversación
-            embeddedservice_bootstrap.addEventHandler("onChatEndedByChasitor", function(data) {
-                console.log('👋 Chat finalizado:', data);
-                SalesforceInteractions.sendEvent({
-                    interaction: {
-                        name: "Chat Ended by User",
-                        catalogObject: {
-                            type: "ChatInteraction",
-                            id: currentChatSessionId || 'unknown',
-                            attributes: {
-                                sessionId: currentChatSessionId,
-                                endedBy: 'user',
-                                timestamp: new Date().toISOString()
-                            }
-                        }
-                    }
-                });
-                console.log('👋 Chat finalizado por el usuario');
-            });
 
             // Inicializar el servicio
             embeddedservice_bootstrap.init(
@@ -677,6 +613,60 @@
             console.error('❌ Error al inicializar el chat:', err);
         }
     }
+    
+    // ========================================
+    // CAPTURAR EVENTOS DEL CHAT (Usando DOM Events)
+    // ========================================
+    
+    // Escuchar cuando el chat está listo
+    window.addEventListener('onEmbeddedMessagingReady', function(event) {
+        console.log('🎯 Chat listo (onEmbeddedMessagingReady)');
+        sendContextToChat(currentChatSessionId);
+    });
+    
+    // Escuchar cuando inicia una conversación
+    window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
+        console.log('🚀 Conversación iniciada (onEmbeddedMessagingConversationStart):', event);
+        const detail = event.detail;
+        
+        if (detail && detail.conversationEntryId) {
+            currentChatSessionId = detail.conversationEntryId;
+            trackChatOpen(detail.conversationEntryId);
+            sendContextToChat(detail.conversationEntryId);
+            updateContextDisplay();
+            console.log('✅ Conversation Entry ID capturado:', detail.conversationEntryId);
+        }
+    });
+    
+    // Interceptar llamadas de red para capturar el conversationEntryId
+    // (Método alternativo más robusto)
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        return originalFetch.apply(this, args).then(response => {
+            // Clonar la respuesta para poder leerla
+            const clonedResponse = response.clone();
+            
+            // Intentar extraer JSON si es posible
+            if (response.url.includes('embeddedservice') || response.url.includes('messaging')) {
+                clonedResponse.json().then(data => {
+                    console.log('🔍 Respuesta de API capturada:', data);
+                    
+                    // Buscar conversationEntryId en la respuesta
+                    if (data && data.conversationEntryId && !currentChatSessionId) {
+                        currentChatSessionId = data.conversationEntryId;
+                        trackChatOpen(data.conversationEntryId);
+                        sendContextToChat(data.conversationEntryId);
+                        updateContextDisplay();
+                        console.log('✅ Conversation Entry ID interceptado:', data.conversationEntryId);
+                    }
+                }).catch(() => {
+                    // No es JSON o no se puede parsear, ignorar
+                });
+            }
+            
+            return response;
+        });
+    };
     
     // ========================================
     // EVENT LISTENERS
