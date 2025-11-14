@@ -283,7 +283,7 @@
                 <span id="context-session-id" style="color: #999;">No iniciado</span>
             </div>
             <div class="context-item">
-                <strong>� Eventos Trackeados:</strong>
+                <strong>📤 Eventos Trackeados:</strong>
                 <span id="context-events">0 eventos</span>
             </div>
             
@@ -644,35 +644,62 @@
     window.fetch = function(...args) {
         const [url, options] = args;
         
+        console.log('🌐 Fetch interceptado - URL:', url);
+        
         // Capturar el Request Payload (body)
-        if (options && options.body && (url.includes('embeddedservice') || url.includes('messaging') || url.includes('conversation'))) {
+        if (options && options.body) {
             try {
                 const requestBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
-                console.log('📤 Request Payload capturado:', requestBody);
                 
-                // Buscar conversationId en el request
-                if (requestBody && requestBody.conversationId) {
-                    if (!currentChatSessionId) {
+                // Log completo del request para debugging
+                if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice')) {
+                    console.log('📤 Request Payload completo:', {
+                        url: url,
+                        body: requestBody
+                    });
+                    
+                    // Buscar en acks array (como se ve en la captura)
+                    if (requestBody && requestBody.acks && Array.isArray(requestBody.acks)) {
+                        requestBody.acks.forEach(ack => {
+                            if (ack.conversationEntryId && !currentChatSessionId) {
+                                currentChatSessionId = ack.conversationEntryId;
+                                trackChatOpen(ack.conversationEntryId);
+                                sendContextToChat(ack.conversationEntryId);
+                                updateContextDisplay();
+                                console.log('✅ 🎯 Conversation Entry ID capturado de acks:', ack.conversationEntryId);
+                            }
+                        });
+                    }
+                    
+                    // Buscar conversationId directamente
+                    if (requestBody && requestBody.conversationId && !currentChatSessionId) {
                         currentChatSessionId = requestBody.conversationId;
                         trackChatOpen(requestBody.conversationId);
                         sendContextToChat(requestBody.conversationId);
                         updateContextDisplay();
                         console.log('✅ Conversation ID capturado del Request:', requestBody.conversationId);
                     }
-                }
-                
-                // También buscar routingAttributes con conversationId
-                if (requestBody && requestBody.routingAttributes && requestBody.routingAttributes.conversationId) {
-                    if (!currentChatSessionId) {
-                        currentChatSessionId = requestBody.routingAttributes.conversationId;
-                        trackChatOpen(requestBody.routingAttributes.conversationId);
-                        sendContextToChat(requestBody.routingAttributes.conversationId);
-                        updateContextDisplay();
-                        console.log('✅ Conversation ID capturado de routingAttributes:', requestBody.routingAttributes.conversationId);
+                    
+                    // Buscar en routingAttributes
+                    if (requestBody && requestBody.routingAttributes) {
+                        if (requestBody.routingAttributes.conversationId && !currentChatSessionId) {
+                            currentChatSessionId = requestBody.routingAttributes.conversationId;
+                            trackChatOpen(requestBody.routingAttributes.conversationId);
+                            sendContextToChat(requestBody.routingAttributes.conversationId);
+                            updateContextDisplay();
+                            console.log('✅ Conversation ID capturado de routingAttributes:', requestBody.routingAttributes.conversationId);
+                        }
+                        if (requestBody.routingAttributes.conversationEntryId && !currentChatSessionId) {
+                            currentChatSessionId = requestBody.routingAttributes.conversationEntryId;
+                            trackChatOpen(requestBody.routingAttributes.conversationEntryId);
+                            sendContextToChat(requestBody.routingAttributes.conversationEntryId);
+                            updateContextDisplay();
+                            console.log('✅ Conversation Entry ID capturado de routingAttributes:', requestBody.routingAttributes.conversationEntryId);
+                        }
                     }
                 }
             } catch (e) {
-                // Ignorar errores de parsing
+                console.warn('Error parseando request body:', e);
             }
         }
         
@@ -680,9 +707,10 @@
         return originalFetch.apply(this, args).then(response => {
             const clonedResponse = response.clone();
             
-            if (response.url.includes('embeddedservice') || response.url.includes('messaging') || response.url.includes('conversation')) {
+            if (response.url.includes('conversation') || response.url.includes('messaging') || response.url.includes('embeddedservice')) {
                 clonedResponse.json().then(data => {
-                    console.log('🔍 Response capturada:', data);
+                    console.log('🔍 Response capturada de:', response.url);
+                    console.log('🔍 Response data:', data);
                     
                     // Buscar conversationEntryId o conversationId en la respuesta
                     if (data && !currentChatSessionId) {
@@ -695,8 +723,9 @@
                             console.log('✅ Conversation ID interceptado de Response:', convId);
                         }
                     }
-                }).catch(() => {
-                    // No es JSON o no se puede parsear, ignorar
+                }).catch((err) => {
+                    // No es JSON o no se puede parsear
+                    console.log('No se pudo parsear response como JSON:', err.message);
                 });
             }
             
