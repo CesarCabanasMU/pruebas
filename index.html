@@ -646,19 +646,36 @@
         
         console.log('🌐 Fetch interceptado - URL:', url);
         
+        // ⭐ CAPTURAR conversationEntryId de la URL (query parameters)
+        try {
+            const urlObj = new URL(url, window.location.origin);
+            const conversationIdFromUrl = urlObj.searchParams.get('conversationEntryId') || 
+                                         urlObj.searchParams.get('conversationId');
+            
+            if (conversationIdFromUrl && !currentChatSessionId) {
+                currentChatSessionId = conversationIdFromUrl;
+                trackChatOpen(conversationIdFromUrl);
+                sendContextToChat(conversationIdFromUrl);
+                updateContextDisplay();
+                console.log('✅ 🎯 Conversation ID capturado de URL params:', conversationIdFromUrl);
+            }
+        } catch (e) {
+            // URL no válida o error al parsear
+        }
+        
         // Capturar el Request Payload (body)
         if (options && options.body) {
             try {
                 const requestBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
                 
                 // Log completo del request para debugging
-                if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice')) {
+                if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry')) {
                     console.log('📤 Request Payload completo:', {
                         url: url,
                         body: requestBody
                     });
                     
-                    // Buscar en acks array (como se ve en la captura)
+                    // Buscar en acks array (como se ve en la captura anterior)
                     if (requestBody && requestBody.acks && Array.isArray(requestBody.acks)) {
                         requestBody.acks.forEach(ack => {
                             if (ack.conversationEntryId && !currentChatSessionId) {
@@ -669,6 +686,15 @@
                                 console.log('✅ 🎯 Conversation Entry ID capturado de acks:', ack.conversationEntryId);
                             }
                         });
+                    }
+                    
+                    // Buscar conversationEntryId directamente en el body
+                    if (requestBody && requestBody.conversationEntryId && !currentChatSessionId) {
+                        currentChatSessionId = requestBody.conversationEntryId;
+                        trackChatOpen(requestBody.conversationEntryId);
+                        sendContextToChat(requestBody.conversationEntryId);
+                        updateContextDisplay();
+                        console.log('✅ Conversation Entry ID capturado del Request body:', requestBody.conversationEntryId);
                     }
                     
                     // Buscar conversationId directamente
