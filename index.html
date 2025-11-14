@@ -130,6 +130,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
 
         .feature-card:hover {
@@ -241,13 +242,13 @@
 
     <div class="container">
         <div class="chat-notice">
-            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente en la esquina inferior derecha. Haz click en ella para abrir una conversación.
+            <strong>ℹ️ Información:</strong> Esta página usa <strong>Salesforce Interactions (Marketing Cloud Personalization)</strong> para trackear tu comportamiento y enviarlo al agente del chat. La burbuja del chat estará visible en la esquina inferior derecha. ¡Todas tus interacciones son trackeadas!
         </div>
 
         <!-- Panel de Contexto en Tiempo Real -->
         <div class="context-panel">
             <h3>📊 Datos que se envían al Agente de Salesforce</h3>
-            <p style="color: #666; margin-bottom: 1rem;">Esta información se captura automáticamente y se envía al agente cuando inicias una conversación:</p>
+            <p style="color: #666; margin-bottom: 1rem;">Esta información se captura automáticamente usando <strong>Salesforce Interactions (Marketing Cloud Personalization)</strong> y se envía al agente cuando inicias una conversación:</p>
             
             <div class="context-item">
                 <strong>🌐 URL de la Página:</strong>
@@ -277,28 +278,38 @@
                 <strong>🕐 Timestamp:</strong>
                 <span id="context-timestamp">Cargando...</span>
             </div>
+            <div class="context-item">
+                <strong>📤 Eventos Trackeados:</strong>
+                <span id="context-events">0 eventos</span>
+            </div>
             
             <button class="update-btn" onclick="updateContextDisplay()">🔄 Actualizar Contexto</button>
+            
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f8ff; border-radius: 4px;">
+                <p style="margin: 0; color: #555; font-size: 0.9rem;">
+                    <strong>💡 Tip:</strong> Haz click en las tarjetas de características o botones para ver cómo se trackean las interacciones en la consola del navegador (F12).
+                </p>
+            </div>
         </div>
 
         <section class="hero" id="inicio">
             <h2>Bienvenido a nuestra página</h2>
             <p>Esta es una prueba de concepto que demuestra la integración de Salesforce Embedded Messaging. Nuestro agente de chat se activará automáticamente para ayudarte con cualquier pregunta.</p>
-            <button class="cta-button" onclick="alert('¿En qué podemos ayudarte?')">Obtén más información</button>
+            <button class="cta-button" onclick="trackButtonClick('cta-main', 'get-info'); alert('¿En qué podemos ayudarte?')">Obtén más información</button>
         </section>
 
         <section id="caracteristicas">
             <h2 style="text-align: center; color: #333; margin-bottom: 2rem;">Características Principales</h2>
             <div class="features">
-                <div class="feature-card">
+                <div class="feature-card" onclick="trackFeatureView('Chat 24/7')">
                     <h3>💬 Chat 24/7</h3>
                     <p>Soporte instantáneo disponible en cualquier momento del día. Nuestro agente está aquí para resolver tus dudas rápidamente.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" onclick="trackFeatureView('Rápido y Eficiente')">
                     <h3>⚡ Rápido y Eficiente</h3>
                     <p>Respuestas inmediatas y soluciones ágiles para tus problemas. Optimizado para ofrecerte la mejor experiencia.</p>
                 </div>
-                <div class="feature-card">
+                <div class="feature-card" onclick="trackFeatureView('Seguro')">
                     <h3>🔒 Seguro</h3>
                     <p>Tu información está protegida con los más altos estándares de seguridad de Salesforce Enterprise.</p>
                 </div>
@@ -311,7 +322,40 @@
         <p>Prueba de concepto - GitHub Seeds</p>
     </footer>
 
+    <!-- Salesforce Interactions SDK (Marketing Cloud Personalization) -->
     <script type='text/javascript'>
+    // ========================================
+    // CONFIGURACIÓN DE SALESFORCE INTERACTIONS
+    // ========================================
+    
+    // Simulación del SDK de Salesforce Interactions
+    // En producción, cargarías el SDK real desde tu cuenta de MC Personalization
+    window.SalesforceInteractions = window.SalesforceInteractions || {
+        events: [],
+        init: function(config) {
+            this.config = config;
+            console.log('✓ Salesforce Interactions inicializado:', config);
+        },
+        sendEvent: function(eventData) {
+            this.events.push(eventData);
+            console.log('📤 Evento enviado a Salesforce Interactions:', eventData);
+            return eventData;
+        },
+        setUserIdentity: function(identity) {
+            this.userIdentity = identity;
+            console.log('👤 Identidad de usuario establecida:', identity);
+        }
+    };
+    
+    // Inicializar Salesforce Interactions
+    SalesforceInteractions.init({
+        cookieDomain: window.location.hostname,
+        consents: [{
+            purpose: SalesforceInteractions.ConsentPurpose.Tracking,
+            status: SalesforceInteractions.ConsentStatus.OptIn
+        }]
+    });
+    
     // ========================================
     // FUNCIONES PARA CAPTURAR CONTEXTO DE LA PÁGINA
     // ========================================
@@ -351,21 +395,146 @@
     }
     
     function sendContextToChat() {
-        // Esta función envía el contexto actualizado al chat
+        // Esta función envía el contexto actualizado usando Salesforce Interactions
         const context = getPageContext();
         
-        // Si el chat está disponible, actualizar el contexto
+        // ⭐ ENVIAR EVENTO A SALESFORCE INTERACTIONS ⭐
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "Page View",
+                catalogObject: {
+                    type: "WebPage",
+                    id: context.pagePath,
+                    attributes: {
+                        url: context.pageUrl,
+                        title: context.pageTitle,
+                        section: context.pageSection,
+                        referrer: context.referrer,
+                        language: context.language,
+                        resolution: context.screenResolution
+                    },
+                    relatedCatalogObjects: {
+                        UserContext: [{
+                            type: "UserSession",
+                            id: generateSessionId(),
+                            attributes: {
+                                timestamp: context.timestamp,
+                                userAgent: context.userAgent
+                            }
+                        }]
+                    }
+                }
+            },
+            user: {
+                attributes: {
+                    currentPage: context.pageUrl,
+                    currentSection: context.pageSection,
+                    sessionStart: getSessionStart()
+                }
+            }
+        });
+        
+        // También actualizar el chat si está disponible
         if (typeof embeddedservice_bootstrap !== 'undefined') {
             try {
-                // Método para pasar variables de contexto
                 embeddedservice_bootstrap.contextData = context;
                 console.log('✓ Contexto enviado al chat de Salesforce');
             } catch (err) {
-                console.warn('No se pudo actualizar el contexto:', err);
+                console.warn('No se pudo actualizar el contexto del chat:', err);
             }
         }
         
         return context;
+    }
+    
+    // Generar ID de sesión único
+    function generateSessionId() {
+        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    // Obtener timestamp de inicio de sesión
+    function getSessionStart() {
+        if (!window.sessionStartTime) {
+            window.sessionStartTime = new Date().toISOString();
+        }
+        return window.sessionStartTime;
+    }
+    
+    // ========================================
+    // FUNCIONES PARA TRACKING DE INTERACCIONES
+    // ========================================
+    
+    // Trackear vista de característica
+    function trackFeatureView(featureName) {
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "View Feature",
+                catalogObject: {
+                    type: "Feature",
+                    id: featureName.toLowerCase().replace(/\s+/g, '-'),
+                    attributes: {
+                        name: featureName,
+                        page: window.location.pathname
+                    }
+                }
+            }
+        });
+    }
+    
+    // Trackear clics en botones
+    function trackButtonClick(buttonName, buttonAction) {
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "Button Click",
+                action: buttonAction,
+                catalogObject: {
+                    type: "Button",
+                    id: buttonName,
+                    attributes: {
+                        buttonName: buttonName,
+                        action: buttonAction,
+                        page: window.location.pathname,
+                        timestamp: new Date().toISOString()
+                    }
+                }
+            }
+        });
+    }
+    
+    // Trackear navegación entre secciones
+    function trackSectionChange(fromSection, toSection) {
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "Section Navigation",
+                catalogObject: {
+                    type: "PageSection",
+                    id: toSection,
+                    attributes: {
+                        fromSection: fromSection,
+                        toSection: toSection,
+                        page: window.location.pathname
+                    }
+                }
+            }
+        });
+    }
+    
+    // Trackear cuando se abre el chat
+    function trackChatOpen() {
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "Chat Opened",
+                catalogObject: {
+                    type: "ChatInteraction",
+                    id: 'chat_' + Date.now(),
+                    attributes: {
+                        pageUrl: window.location.href,
+                        pageSection: getCurrentSection(),
+                        timestamp: new Date().toISOString()
+                    }
+                }
+            }
+        });
     }
     
     // ========================================
@@ -444,11 +613,22 @@
     // EVENT LISTENERS
     // ========================================
     
+    // Variable para trackear la sección anterior
+    let previousSection = getCurrentSection();
+    
     // Actualizar contexto cuando el usuario cambia de sección
     window.addEventListener('scroll', function() {
         // Debounce para no ejecutar demasiado frecuentemente
         clearTimeout(window.scrollTimeout);
         window.scrollTimeout = setTimeout(function() {
+            const currentSection = getCurrentSection();
+            
+            // Si cambió de sección, trackear el cambio
+            if (currentSection !== previousSection) {
+                trackSectionChange(previousSection, currentSection);
+                previousSection = currentSection;
+            }
+            
             sendContextToChat();
         }, 500);
     });
@@ -462,6 +642,24 @@
     // Log cuando se inicia una conversación
     document.addEventListener('embeddedMessagingConversationStart', function() {
         console.log('💬 Conversación iniciada con contexto:', getPageContext());
+        trackChatOpen();
+    });
+    
+    // Trackear cuando el usuario sale de la página
+    window.addEventListener('beforeunload', function() {
+        SalesforceInteractions.sendEvent({
+            interaction: {
+                name: "Page Exit",
+                catalogObject: {
+                    type: "WebPage",
+                    id: window.location.pathname,
+                    attributes: {
+                        timeOnPage: Date.now() - performance.timing.navigationStart,
+                        exitTimestamp: new Date().toISOString()
+                    }
+                }
+            }
+        });
     });
     
     // ========================================
@@ -480,12 +678,22 @@
         document.getElementById('context-resolution').textContent = context.screenResolution;
         document.getElementById('context-timestamp').textContent = new Date(context.timestamp).toLocaleString('es-ES');
         
+        // Mostrar cantidad de eventos trackeados
+        const eventCount = SalesforceInteractions.events ? SalesforceInteractions.events.length : 0;
+        document.getElementById('context-events').textContent = `${eventCount} evento${eventCount !== 1 ? 's' : ''}`;
+        
         console.log('✓ Display de contexto actualizado');
+        console.log(`📊 Total de eventos trackeados: ${eventCount}`);
     }
     
     // Actualizar el display cuando carga la página
     window.addEventListener('load', function() {
-        setTimeout(updateContextDisplay, 500);
+        setTimeout(function() {
+            updateContextDisplay();
+            // Enviar evento inicial de carga de página
+            sendContextToChat();
+            console.log('🚀 Página cargada - Tracking iniciado con Salesforce Interactions');
+        }, 500);
     });
     
     // Actualizar también al hacer scroll
