@@ -1,0 +1,12 @@
+SalesforceInteractions.sendEvent({
+  interaction: {
+    name: "View Catalog Object",
+    catalogObject: {
+      type: "Product",
+      id: "65e4e737",
+      attributes: {
+        description: "Shoes",
+      },
+    },
+  },
+});
