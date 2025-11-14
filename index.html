@@ -457,11 +457,40 @@
         
         SalesforceInteractions.sendEvent(eventData);
         
-        // También actualizar el chat si está disponible
+        // ⭐⭐ ENVIAR CONTEXTO AL CHAT DE SALESFORCE (para que el agente lo vea) ⭐⭐
         if (typeof embeddedservice_bootstrap !== 'undefined') {
             try {
+                // Crear un mensaje oculto con el contexto (Hidden Prechat Data)
+                const contextMessage = `CONTEXTO_DE_PAGINA:
+Título: ${context.pageTitle}
+URL: ${context.pageUrl}
+Sección: ${context.pageSection}
+Referencia: ${context.referrer}
+Idioma: ${context.language}
+Resolución: ${context.screenResolution}
+Timestamp: ${context.timestamp}`;
+                
+                // Intentar enviar como datos de prechat
+                if (embeddedservice_bootstrap.settings) {
+                    embeddedservice_bootstrap.settings.extraPrechatInfo = embeddedservice_bootstrap.settings.extraPrechatInfo || [];
+                    embeddedservice_bootstrap.settings.extraPrechatFormDetails = embeddedservice_bootstrap.settings.extraPrechatFormDetails || [];
+                    
+                    // Agregar campos de contexto
+                    embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
+                        { label: "Page_Title__c", value: context.pageTitle, displayToAgent: true, transcriptFields: ["Page_Title__c"] },
+                        { label: "Page_URL__c", value: context.pageUrl, displayToAgent: true, transcriptFields: ["Page_URL__c"] },
+                        { label: "Page_Section__c", value: context.pageSection, displayToAgent: true, transcriptFields: ["Page_Section__c"] },
+                        { label: "Referrer__c", value: context.referrer, displayToAgent: true, transcriptFields: ["Referrer__c"] },
+                        { label: "User_Language__c", value: context.language, displayToAgent: true, transcriptFields: ["User_Language__c"] },
+                        { label: "Screen_Resolution__c", value: context.screenResolution, displayToAgent: true, transcriptFields: ["Screen_Resolution__c"] },
+                        { label: "Session_ID__c", value: chatSessionId || 'not-started', displayToAgent: true, transcriptFields: ["Session_ID__c"] }
+                    ];
+                }
+                
                 embeddedservice_bootstrap.contextData = context;
-                console.log('✓ Contexto enviado al chat de Salesforce');
+                console.log('✓ Contexto enviado al chat de Salesforce para el agente');
+                console.log('📋 Datos visibles para el agente:', contextMessage);
+                
             } catch (err) {
                 console.warn('No se pudo actualizar el contexto del chat:', err);
             }
@@ -594,8 +623,22 @@
     
     function initEmbeddedMessaging() {
         try {
+            // Obtener contexto inicial
+            const initialContext = getPageContext();
+            
             // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
+            
+            // ⭐ CONFIGURAR DATOS DE PRECHAT CON CONTEXTO DE LA PÁGINA ⭐
+            embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
+                { label: "Page_Title__c", value: initialContext.pageTitle, displayToAgent: true },
+                { label: "Page_URL__c", value: initialContext.pageUrl, displayToAgent: true },
+                { label: "Page_Section__c", value: initialContext.pageSection, displayToAgent: true },
+                { label: "Referrer__c", value: initialContext.referrer, displayToAgent: true },
+                { label: "User_Language__c", value: initialContext.language, displayToAgent: true }
+            ];
+            
+            console.log('📋 Prechat data configurado:', embeddedservice_bootstrap.settings.extraPrechatFormDetails);
 
             // Inicializar el servicio
             embeddedservice_bootstrap.init(
@@ -608,6 +651,7 @@
             );
            
             console.log('✓ Chat de Salesforce inicializado correctamente');
+            console.log('✓ Datos de contexto configurados para el agente');
            
         } catch (err) {
             console.error('❌ Error al inicializar el chat:', err);
