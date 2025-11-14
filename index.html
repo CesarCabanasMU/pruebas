@@ -279,11 +279,11 @@
                 <span id="context-timestamp">Cargando...</span>
             </div>
             <div class="context-item">
-                <strong>� ID Sesión Chat:</strong>
+                <strong>💬 ID Sesión Chat:</strong>
                 <span id="context-session-id" style="color: #999;">No iniciado</span>
             </div>
             <div class="context-item">
-                <strong>�📤 Eventos Trackeados:</strong>
+                <strong>� Eventos Trackeados:</strong>
                 <span id="context-events">0 eventos</span>
             </div>
             
@@ -638,26 +638,62 @@
         }
     });
     
-    // Interceptar llamadas de red para capturar el conversationEntryId
-    // (Método alternativo más robusto)
+    // Interceptar llamadas de red para capturar el conversationId
+    // (Método robusto que captura request y response)
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
+        const [url, options] = args;
+        
+        // Capturar el Request Payload (body)
+        if (options && options.body && (url.includes('embeddedservice') || url.includes('messaging') || url.includes('conversation'))) {
+            try {
+                const requestBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+                console.log('📤 Request Payload capturado:', requestBody);
+                
+                // Buscar conversationId en el request
+                if (requestBody && requestBody.conversationId) {
+                    if (!currentChatSessionId) {
+                        currentChatSessionId = requestBody.conversationId;
+                        trackChatOpen(requestBody.conversationId);
+                        sendContextToChat(requestBody.conversationId);
+                        updateContextDisplay();
+                        console.log('✅ Conversation ID capturado del Request:', requestBody.conversationId);
+                    }
+                }
+                
+                // También buscar routingAttributes con conversationId
+                if (requestBody && requestBody.routingAttributes && requestBody.routingAttributes.conversationId) {
+                    if (!currentChatSessionId) {
+                        currentChatSessionId = requestBody.routingAttributes.conversationId;
+                        trackChatOpen(requestBody.routingAttributes.conversationId);
+                        sendContextToChat(requestBody.routingAttributes.conversationId);
+                        updateContextDisplay();
+                        console.log('✅ Conversation ID capturado de routingAttributes:', requestBody.routingAttributes.conversationId);
+                    }
+                }
+            } catch (e) {
+                // Ignorar errores de parsing
+            }
+        }
+        
+        // Interceptar también la respuesta
         return originalFetch.apply(this, args).then(response => {
-            // Clonar la respuesta para poder leerla
             const clonedResponse = response.clone();
             
-            // Intentar extraer JSON si es posible
-            if (response.url.includes('embeddedservice') || response.url.includes('messaging')) {
+            if (response.url.includes('embeddedservice') || response.url.includes('messaging') || response.url.includes('conversation')) {
                 clonedResponse.json().then(data => {
-                    console.log('🔍 Respuesta de API capturada:', data);
+                    console.log('🔍 Response capturada:', data);
                     
-                    // Buscar conversationEntryId en la respuesta
-                    if (data && data.conversationEntryId && !currentChatSessionId) {
-                        currentChatSessionId = data.conversationEntryId;
-                        trackChatOpen(data.conversationEntryId);
-                        sendContextToChat(data.conversationEntryId);
-                        updateContextDisplay();
-                        console.log('✅ Conversation Entry ID interceptado:', data.conversationEntryId);
+                    // Buscar conversationEntryId o conversationId en la respuesta
+                    if (data && !currentChatSessionId) {
+                        const convId = data.conversationEntryId || data.conversationId || data.id;
+                        if (convId) {
+                            currentChatSessionId = convId;
+                            trackChatOpen(convId);
+                            sendContextToChat(convId);
+                            updateContextDisplay();
+                            console.log('✅ Conversation ID interceptado de Response:', convId);
+                        }
                     }
                 }).catch(() => {
                     // No es JSON o no se puede parsear, ignorar
@@ -666,6 +702,57 @@
             
             return response;
         });
+    };
+    
+    // También interceptar XMLHttpRequest como respaldo
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._url = url;
+        return originalXHROpen.apply(this, [method, url, ...rest]);
+    };
+    
+    XMLHttpRequest.prototype.send = function(body) {
+        if (this._url && (this._url.includes('embeddedservice') || this._url.includes('messaging') || this._url.includes('conversation'))) {
+            try {
+                const requestData = typeof body === 'string' ? JSON.parse(body) : body;
+                console.log('📤 XHR Request capturado:', requestData);
+                
+                if (requestData && requestData.conversationId && !currentChatSessionId) {
+                    currentChatSessionId = requestData.conversationId;
+                    trackChatOpen(requestData.conversationId);
+                    sendContextToChat(requestData.conversationId);
+                    updateContextDisplay();
+                    console.log('✅ Conversation ID capturado de XHR:', requestData.conversationId);
+                }
+            } catch (e) {
+                // Ignorar errores
+            }
+            
+            // Interceptar respuesta
+            this.addEventListener('load', function() {
+                try {
+                    const responseData = JSON.parse(this.responseText);
+                    console.log('🔍 XHR Response capturada:', responseData);
+                    
+                    if (responseData && !currentChatSessionId) {
+                        const convId = responseData.conversationEntryId || responseData.conversationId || responseData.id;
+                        if (convId) {
+                            currentChatSessionId = convId;
+                            trackChatOpen(convId);
+                            sendContextToChat(convId);
+                            updateContextDisplay();
+                            console.log('✅ Conversation ID interceptado de XHR Response:', convId);
+                        }
+                    }
+                } catch (e) {
+                    // Ignorar errores
+                }
+            });
+        }
+        
+        return originalXHRSend.apply(this, arguments);
     };
     
     // ========================================
