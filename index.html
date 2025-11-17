@@ -337,25 +337,26 @@
            
             console.log('✓ Chat inicializado');
             
-            // Esperar a que el API esté disponible y enviar datos
-            setTimeout(() => {
+            // Escuchar cuando se abre el chat y enviar contexto como primer mensaje automático
+            window.addEventListener('onEmbeddedMessagingReady', () => {
+                console.log('🎯 Chat abierto, enviando contexto...');
+                
+                // Enviar contexto como mensaje del sistema
+                const contextMessage = `📊 Contexto de la página:\n` +
+                    `📄 Título: ${context.pageTitle}\n` +
+                    `🌐 URL: ${context.pageUrl}\n` +
+                    `🌍 Idioma: ${context.language}\n` +
+                    `🔗 Referencia: ${context.referrer}`;
+                
+                // Intentar enviar via prechatAPI si está disponible
                 if (embeddedservice_bootstrap.prechatAPI) {
                     embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({
-                        PageTitle: context.pageTitle,
-                        PageURL: context.pageUrl,
-                        UserLanguage: context.language,
-                        Referrer: context.referrer
+                        PageContext: contextMessage
                     });
-                    console.log('✅ Hidden fields enviados via prechatAPI:', {
-                        PageTitle: context.pageTitle,
-                        PageURL: context.pageUrl,
-                        UserLanguage: context.language,
-                        Referrer: context.referrer
-                    });
-                } else {
-                    console.warn('⚠️ prechatAPI no disponible aún');
                 }
-            }, 1000);
+                
+                console.log('✅ Contexto enviado:', contextMessage);
+            });
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
         }

@@ -1,12 +1,21 @@
-SalesforceInteractions.sendEvent({
-  interaction: {
-    name: "View Catalog Object",
-    catalogObject: {
-      type: "Product",
-      id: "65e4e737",
-      attributes: {
-        description: "Shoes",
-      },
-    },
-  },
-});
+trigger MessagingSessionContext on MessagingSession (after insert) {
+    for (MessagingSession ms : Trigger.new) {
+        // Buscar el primer mensaje de la conversación
+        List<ConversationEntry> entries = [
+            SELECT MessageText 
+            FROM ConversationEntry 
+            WHERE ConversationIdentifier = :ms.ConversationIdentifier 
+            ORDER BY CreatedDate ASC 
+            LIMIT 1
+        ];
+        
+        if (!entries.isEmpty() && entries[0].MessageText.contains('📊 Contexto')) {
+            String context = entries[0].MessageText;
+            // Parsear y guardar en campos personalizados
+            ms.Page_Title__c = extractValue(context, 'Título:');
+            ms.Page_URL__c = extractValue(context, 'URL:');
+            // etc...
+            update ms;
+        }
+    }
+}
