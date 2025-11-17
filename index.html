@@ -242,13 +242,13 @@
 
     <div class="container">
         <div class="chat-notice">
-            <strong>ℹ️ Información:</strong> Esta página usa <strong>Salesforce Interactions (Marketing Cloud Personalization)</strong> para trackear tu comportamiento y enviarlo al agente del chat. La burbuja del chat estará visible en la esquina inferior derecha. ¡Todas tus interacciones son trackeadas!
+            <strong>ℹ️ Información:</strong> Esta página captura automáticamente el contexto de navegación y lo envía al agente del chat de Salesforce. Los datos incluyen el título de la página, URL e idioma.
         </div>
 
         <!-- Panel de Contexto en Tiempo Real -->
         <div class="context-panel">
             <h3>📊 Datos que se envían al Agente de Salesforce</h3>
-            <p style="color: #666; margin-bottom: 1rem;">Esta información se captura automáticamente usando <strong>Salesforce Interactions (Marketing Cloud Personalization)</strong> y se envía al agente cuando inicias una conversación:</p>
+            <p style="color: #666; margin-bottom: 1rem;">Esta información se captura automáticamente y se envía al agente cuando inicias una conversación:</p>
             
             <div class="context-item">
                 <strong>🌐 URL de la Página:</strong>
@@ -259,20 +259,12 @@
                 <span id="context-title">Cargando...</span>
             </div>
             <div class="context-item">
-                <strong>📍 Sección Actual:</strong>
-                <span id="context-section">Cargando...</span>
-            </div>
-            <div class="context-item">
                 <strong>🔗 Referencia:</strong>
                 <span id="context-referrer">Cargando...</span>
             </div>
             <div class="context-item">
                 <strong>🌍 Idioma:</strong>
                 <span id="context-language">Cargando...</span>
-            </div>
-            <div class="context-item">
-                <strong>📱 Resolución:</strong>
-                <span id="context-resolution">Cargando...</span>
             </div>
             <div class="context-item">
                 <strong>🕐 Timestamp:</strong>
@@ -282,19 +274,12 @@
                 <strong>💬 ID Sesión Chat:</strong>
                 <span id="context-session-id" style="color: #999;">No iniciado</span>
             </div>
-            <div class="context-item">
-                <strong>📤 Eventos Trackeados:</strong>
-                <span id="context-events">0 eventos</span>
-            </div>
             
             <button class="update-btn" onclick="updateContextDisplay()">🔄 Actualizar Contexto</button>
             
             <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f8ff; border-radius: 4px;">
                 <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                    <strong>💡 Tip:</strong> Haz click en las tarjetas de características o botones para ver cómo se trackean las interacciones en la consola del navegador (F12).
-                </p>
-                <p style="margin: 0.5rem 0 0 0; color: #555; font-size: 0.9rem;">
-                    <strong>🔑 ID de Sesión:</strong> Se capturará automáticamente cuando inicies una conversación con el chatbot. Este ID vincula todos los eventos de tracking con tu conversación específica.
+                    <strong>🔑 ID de Sesión:</strong> Se capturará automáticamente cuando inicies una conversación con el chatbot.
                 </p>
             </div>
         </div>
@@ -302,21 +287,20 @@
         <section class="hero" id="inicio">
             <h2>Bienvenido a nuestra página</h2>
             <p>Esta es una prueba de concepto que demuestra la integración de Salesforce Embedded Messaging. Nuestro agente de chat se activará automáticamente para ayudarte con cualquier pregunta.</p>
-            <button class="cta-button" onclick="trackButtonClick('cta-main', 'get-info'); alert('¿En qué podemos ayudarte?')">Obtén más información</button>
         </section>
 
         <section id="caracteristicas">
             <h2 style="text-align: center; color: #333; margin-bottom: 2rem;">Características Principales</h2>
             <div class="features">
-                <div class="feature-card" onclick="trackFeatureView('Chat 24/7')">
+                <div class="feature-card">
                     <h3>💬 Chat 24/7</h3>
                     <p>Soporte instantáneo disponible en cualquier momento del día. Nuestro agente está aquí para resolver tus dudas rápidamente.</p>
                 </div>
-                <div class="feature-card" onclick="trackFeatureView('Rápido y Eficiente')">
+                <div class="feature-card">
                     <h3>⚡ Rápido y Eficiente</h3>
                     <p>Respuestas inmediatas y soluciones ágiles para tus problemas. Optimizado para ofrecerte la mejor experiencia.</p>
                 </div>
-                <div class="feature-card" onclick="trackFeatureView('Seguro')">
+                <div class="feature-card">
                     <h3>🔒 Seguro</h3>
                     <p>Tu información está protegida con los más altos estándares de seguridad de Salesforce Enterprise.</p>
                 </div>
@@ -329,31 +313,10 @@
         <p>Prueba de concepto - GitHub Seeds</p>
     </footer>
 
-    <!-- Salesforce Interactions & Chat Integration -->
+    <!-- Salesforce Embedded Messaging Integration -->
     <script type='text/javascript'>
     // ========================================
-    // 1. SALESFORCE INTERACTIONS SDK (Marketing Cloud)
-    // ========================================
-    
-    window.SalesforceInteractions = window.SalesforceInteractions || {
-        events: [],
-        init: function(config) {
-            this.config = config;
-            console.log('✓ Salesforce Interactions inicializado');
-        },
-        sendEvent: function(eventData) {
-            this.events.push(eventData);
-            console.log('📤 Evento a Marketing Cloud:', eventData);
-            return eventData;
-        }
-    };
-    
-    SalesforceInteractions.init({
-        cookieDomain: window.location.hostname
-    });
-    
-    // ========================================
-    // 2. CAPTURA DE CONTEXTO
+    // 1. CAPTURA DE CONTEXTO
     // ========================================
     
     let currentChatSessionId = null;
@@ -368,33 +331,12 @@
     }
     
     // ========================================
-    // 3. ENVÍO DE DATOS (2 MÉTODOS)
+    // 2. CONFIGURACIÓN DE DATOS PARA EL AGENTE
     // ========================================
     
-    // MÉTODO 1: Enviar a Salesforce Interactions (Marketing Cloud)
-    function sendToMarketingCloud(sessionId) {
-        const context = getPageContext();
-        
-        SalesforceInteractions.sendEvent({
-            user: {
-                attributes: {
-                    chatSessionId: sessionId,
-                    currentPageUrl: context.pageUrl,
-                    currentPageTitle: context.pageTitle,
-                    userLanguage: context.language,
-                    chatStartTime: new Date().toISOString()
-                }
-            }
-        });
-        
-        console.log('✅ Datos enviados a Marketing Cloud');
-    }
-    
-    // MÉTODO 2: Enviar a MessagingSession (para el agente)
     function sendToMessagingSession() {
         const context = getPageContext();
         
-        // OPCIÓN A: Campos personalizados (requiere crearlos en Salesforce)
         embeddedservice_bootstrap.settings.extraPrechatInfo = [{
             "entityName": "MessagingSession",
             "showOnCreate": true,
@@ -416,18 +358,18 @@
             pageUrl: context.pageUrl,
             language: context.language
         });
-        console.log('📋 extraPrechatFormDetails:', embeddedservice_bootstrap.settings.extraPrechatFormDetails);
     }
     
     // ========================================
-    // 4. INICIALIZACIÓN DEL CHAT
+    // 3. INICIALIZACIÓN DEL CHAT
     // ========================================
     
     function initEmbeddedMessaging() {
         try {
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // Configurar datos de contexto ANTES de inicializar
+            // ⚠️ PROBLEMA: Los datos se configuran ANTES de init()
+            // y no se pueden actualizar después de que la sesión ya está creada
             sendToMessagingSession();
             
             embeddedservice_bootstrap.init(
@@ -444,121 +386,133 @@
     }
     
     // ========================================
-    // 5. CAPTURA DE SESSION ID
+    // 4. CAPTURA DE SESSION ID & DEBUGGING
     // ========================================
     
+    // Log TODOS los eventos de Salesforce para ver qué hay disponible
+    console.log('🔍 Registrando listeners para TODOS los eventos de Embedded Messaging...');
+    
+    // Evento cuando el chat está listo
+    window.addEventListener('onEmbeddedMessagingReady', function(event) {
+        console.log('🎯 onEmbeddedMessagingReady:', event);
+        console.log('🎯 event.detail:', event.detail);
+    });
+    
+    // Evento cuando inicia conversación
     window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
-        if (event.detail && event.detail.conversationEntryId) {
-            currentChatSessionId = event.detail.conversationEntryId;
+        console.log('🚀 onEmbeddedMessagingConversationStart - EVENTO COMPLETO:', event);
+        console.log('🚀 event.detail COMPLETO:', JSON.stringify(event.detail, null, 2));
+        
+        if (event.detail) {
+            console.log('🔑 Propiedades disponibles en event.detail:', Object.keys(event.detail));
             
-            // Enviar a Marketing Cloud
-            sendToMarketingCloud(currentChatSessionId);
+            // Intentar múltiples propiedades posibles
+            const possibleIds = {
+                conversationEntryId: event.detail.conversationEntryId,
+                conversationId: event.detail.conversationId,
+                id: event.detail.id,
+                sessionId: event.detail.sessionId,
+                messageSessionId: event.detail.messageSessionId,
+                messagingSessionId: event.detail.messagingSessionId
+            };
             
-            // Intentar enviar mensaje de contexto al chat
-            try {
-                const context = getPageContext();
-                const contextMessage = `📍 Contexto de navegación:\n` +
-                    `• Página: ${context.pageTitle}\n` +
-                    `• URL: ${context.pageUrl}\n` +
-                    `• Idioma: ${context.language}`;
-                
-                // Intentar enviar como mensaje oculto del sistema
-                if (embeddedservice_bootstrap.prechatAPI) {
-                    embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({
-                        Page_Title__c: context.pageTitle,
-                        Page_URL__c: context.pageUrl,
-                        User_Language__c: context.language
-                    });
-                    console.log('✅ Contexto enviado vía prechatAPI');
-                }
-            } catch (e) {
-                console.warn('⚠️ No se pudo enviar contexto después del inicio:', e);
+            console.log('🔑 IDs posibles encontrados:', possibleIds);
+            
+            // Usar el primer ID que no sea undefined
+            currentChatSessionId = possibleIds.conversationEntryId || 
+                                   possibleIds.conversationId || 
+                                   possibleIds.id ||
+                                   possibleIds.sessionId ||
+                                   possibleIds.messageSessionId ||
+                                   possibleIds.messagingSessionId;
+            
+            if (currentChatSessionId) {
+                console.log('✅ Session ID capturado:', currentChatSessionId);
+                updateContextDisplay();
+            } else {
+                console.error('❌ NO se encontró ningún ID en event.detail');
             }
-            
-            console.log('✅ Session ID capturado (evento):', currentChatSessionId);
-            updateContextDisplay();
+        } else {
+            console.error('❌ event.detail es undefined');
         }
     });
     
-    // Intercept fetch para capturar session ID de múltiples fuentes
+    // Otros eventos útiles
+    window.addEventListener('onEmbeddedMessagingInitSuccess', function(event) {
+        console.log('✅ onEmbeddedMessagingInitSuccess:', event);
+        console.log('✅ event.detail:', event.detail);
+    });
+    
+    window.addEventListener('onEmbeddedMessagingSettingsLoaded', function(event) {
+        console.log('⚙️ onEmbeddedMessagingSettingsLoaded:', event);
+        console.log('⚙️ event.detail:', event.detail);
+    });
+    
+    // ========================================
+    // 5. INTERCEPCIÓN DE REQUESTS (DEBUG MODE)
+    // ========================================
+    
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
         const [url, options] = args;
         
-        // Capturar de URL params
-        try {
-            const urlObj = new URL(url, window.location.origin);
-            const conversationIdFromUrl = urlObj.searchParams.get('conversationEntryId') || 
-                                         urlObj.searchParams.get('conversationId');
+        // LOG DETALLADO de todas las requests relacionadas con messaging
+        if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry')) {
+            console.log('🌐 FETCH REQUEST:', {
+                url: url,
+                method: options?.method,
+                hasBody: !!options?.body
+            });
             
-            if (conversationIdFromUrl && !currentChatSessionId) {
-                currentChatSessionId = conversationIdFromUrl;
-                sendToMarketingCloud(conversationIdFromUrl);
-                updateContextDisplay();
-                console.log('✅ Session ID capturado (URL params):', conversationIdFromUrl);
+            // Log del body si existe
+            if (options && options.body) {
+                try {
+                    const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+                    console.log('📤 REQUEST BODY COMPLETO:', JSON.stringify(body, null, 2));
+                } catch (e) {
+                    console.log('📤 REQUEST BODY (no JSON):', options.body);
+                }
             }
-        } catch (e) {}
-        
-        // Capturar del request body
-        if (options && options.body && (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry'))) {
-            try {
-                const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
-                
-                // De acks array
-                if (body.acks && Array.isArray(body.acks)) {
-                    body.acks.forEach(ack => {
-                        if (ack.conversationEntryId && !currentChatSessionId) {
-                            currentChatSessionId = ack.conversationEntryId;
-                            sendToMarketingCloud(ack.conversationEntryId);
-                            updateContextDisplay();
-                            console.log('✅ Session ID capturado (acks array):', ack.conversationEntryId);
-                        }
-                    });
-                }
-                
-                // Directamente del body
-                if (body.conversationEntryId && !currentChatSessionId) {
-                    currentChatSessionId = body.conversationEntryId;
-                    sendToMarketingCloud(body.conversationEntryId);
-                    updateContextDisplay();
-                    console.log('✅ Session ID capturado (request body):', body.conversationEntryId);
-                }
-                
-                if (body.conversationId && !currentChatSessionId) {
-                    currentChatSessionId = body.conversationId;
-                    sendToMarketingCloud(body.conversationId);
-                    updateContextDisplay();
-                    console.log('✅ Session ID capturado (conversationId):', body.conversationId);
-                }
-                
-                // De routingAttributes
-                if (body.routingAttributes) {
-                    const convId = body.routingAttributes.conversationEntryId || body.routingAttributes.conversationId;
-                    if (convId && !currentChatSessionId) {
-                        currentChatSessionId = convId;
-                        sendToMarketingCloud(convId);
-                        updateContextDisplay();
-                        console.log('✅ Session ID capturado (routingAttributes):', convId);
-                    }
-                }
-            } catch (e) {}
         }
         
         // Interceptar response
         return originalFetch.apply(this, args).then(response => {
-            if (response.url.includes('conversation') || response.url.includes('messaging') || response.url.includes('embeddedservice')) {
+            if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice')) {
                 const clonedResponse = response.clone();
                 clonedResponse.json().then(data => {
-                    if (data && !currentChatSessionId) {
-                        const convId = data.conversationEntryId || data.conversationId || data.id;
-                        if (convId) {
-                            currentChatSessionId = convId;
-                            sendToMarketingCloud(convId);
-                            updateContextDisplay();
-                            console.log('✅ Session ID capturado (response):', convId);
+                    console.log('📥 RESPONSE de', url, ':', JSON.stringify(data, null, 2));
+                    
+                    // Buscar posibles IDs en la respuesta
+                    if (data) {
+                        const possibleIds = {
+                            conversationEntryId: data.conversationEntryId,
+                            conversationId: data.conversationId,
+                            id: data.id,
+                            sessionId: data.sessionId,
+                            messageSessionId: data.messageSessionId,
+                            messagingSessionId: data.messagingSessionId
+                        };
+                        
+                        console.log('🔍 IDs encontrados en response:', possibleIds);
+                        
+                        if (!currentChatSessionId) {
+                            const foundId = possibleIds.conversationEntryId || 
+                                          possibleIds.conversationId || 
+                                          possibleIds.id ||
+                                          possibleIds.sessionId ||
+                                          possibleIds.messageSessionId ||
+                                          possibleIds.messagingSessionId;
+                            
+                            if (foundId) {
+                                currentChatSessionId = foundId;
+                                updateContextDisplay();
+                                console.log('✅ Session ID capturado de RESPONSE:', foundId);
+                            }
                         }
                     }
-                }).catch(() => {});
+                }).catch((e) => {
+                    console.log('⚠️ Response no es JSON o error:', e.message);
+                });
             }
             return response;
         });
@@ -570,14 +524,12 @@
     
     function updateContextDisplay() {
         const context = getPageContext();
-        const eventCount = SalesforceInteractions.events.length;
         
         document.getElementById('context-url').textContent = context.pageUrl;
         document.getElementById('context-title').textContent = context.pageTitle;
         document.getElementById('context-referrer').textContent = context.referrer;
         document.getElementById('context-language').textContent = context.language;
         document.getElementById('context-timestamp').textContent = new Date().toLocaleString('es-ES');
-        document.getElementById('context-events').textContent = `${eventCount} evento${eventCount !== 1 ? 's' : ''}`;
         
         const sessionIdElement = document.getElementById('context-session-id');
         if (currentChatSessionId) {
