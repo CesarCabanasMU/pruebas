@@ -319,45 +319,24 @@
     }
     
     // ========================================
-    // 2. CONFIGURACIÓN DE DATOS PARA EL AGENTE
-    // ========================================
-    
-    function sendToMessagingSession() {
-        const context = getPageContext();
-        
-        embeddedservice_bootstrap.settings.extraPrechatInfo = [{
-            "entityName": "MessagingSession",
-            "showOnCreate": true,
-            "entityFieldMaps": [
-                { "doCreate": true, "doFind": false, "fieldName": "Page_Title__c", "isExactMatch": false, "label": "Page_Title__c" },
-                { "doCreate": true, "doFind": false, "fieldName": "Page_URL__c", "isExactMatch": false, "label": "Page_URL__c" },
-                { "doCreate": true, "doFind": false, "fieldName": "User_Language__c", "isExactMatch": false, "label": "User_Language__c" }
-            ]
-        }];
-        
-        embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
-            { "label": "Page_Title__c", "value": context.pageTitle, "displayToAgent": true, "transcriptFields": ["Page_Title__c"] },
-            { "label": "Page_URL__c", "value": context.pageUrl, "displayToAgent": true, "transcriptFields": ["Page_URL__c"] },
-            { "label": "User_Language__c", "value": context.language, "displayToAgent": true, "transcriptFields": ["User_Language__c"] }
-        ];
-        
-        console.log('✅ Datos configurados para MessagingSession:', {
-            pageTitle: context.pageTitle,
-            pageUrl: context.pageUrl,
-            language: context.language
-        });
-    }
-    
-    // ========================================
-    // 3. INICIALIZACIÓN DEL CHAT
+    // 2. CONFIGURACIÓN DE HIDDEN PRE-CHAT FIELDS
     // ========================================
     
     function initEmbeddedMessaging() {
         try {
+            const context = getPageContext();
+            
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // Configurar datos ANTES de inicializar
-            sendToMessagingSession();
+            // Hidden pre-chat fields para enviar datos al agente
+            embeddedservice_bootstrap.settings.hiddenPrechatFields = {
+                PageTitle: context.pageTitle,
+                PageURL: context.pageUrl,
+                UserLanguage: context.language,
+                Referrer: context.referrer
+            };
+            
+            console.log('✅ Hidden fields configurados:', embeddedservice_bootstrap.settings.hiddenPrechatFields);
             
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
