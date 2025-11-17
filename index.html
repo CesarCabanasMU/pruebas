@@ -328,15 +328,6 @@
             
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // Pre-populate fields automáticamente
-            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
-                PageTitle: context.pageTitle,
-                PageURL: context.pageUrl,
-                UserLanguage: context.language
-            };
-            
-            console.log('✅ Datos pre-poblados:', embeddedservice_bootstrap.settings.prepopulatedPrechatFields);
-            
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
@@ -345,6 +336,26 @@
             );
            
             console.log('✓ Chat inicializado');
+            
+            // Esperar a que el API esté disponible y enviar datos
+            setTimeout(() => {
+                if (embeddedservice_bootstrap.prechatAPI) {
+                    embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({
+                        PageTitle: context.pageTitle,
+                        PageURL: context.pageUrl,
+                        UserLanguage: context.language,
+                        Referrer: context.referrer
+                    });
+                    console.log('✅ Hidden fields enviados via prechatAPI:', {
+                        PageTitle: context.pageTitle,
+                        PageURL: context.pageUrl,
+                        UserLanguage: context.language,
+                        Referrer: context.referrer
+                    });
+                } else {
+                    console.warn('⚠️ prechatAPI no disponible aún');
+                }
+            }, 1000);
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
         }
