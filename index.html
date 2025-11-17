@@ -444,7 +444,31 @@
     window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
         if (event.detail && event.detail.conversationEntryId) {
             currentChatSessionId = event.detail.conversationEntryId;
+            
+            // Enviar a Marketing Cloud
             sendToMarketingCloud(currentChatSessionId);
+            
+            // Intentar enviar mensaje de contexto al chat
+            try {
+                const context = getPageContext();
+                const contextMessage = `📍 Contexto de navegación:\n` +
+                    `• Página: ${context.pageTitle}\n` +
+                    `• URL: ${context.pageUrl}\n` +
+                    `• Idioma: ${context.language}`;
+                
+                // Intentar enviar como mensaje oculto del sistema
+                if (embeddedservice_bootstrap.prechatAPI) {
+                    embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({
+                        Page_Title__c: context.pageTitle,
+                        Page_URL__c: context.pageUrl,
+                        User_Language__c: context.language
+                    });
+                    console.log('✅ Contexto enviado vía prechatAPI');
+                }
+            } catch (e) {
+                console.warn('⚠️ No se pudo enviar contexto después del inicio:', e);
+            }
+            
             console.log('✅ Session ID capturado (evento):', currentChatSessionId);
             updateContextDisplay();
         }
