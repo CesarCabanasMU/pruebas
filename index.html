@@ -444,37 +444,94 @@
     window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
         if (event.detail && event.detail.conversationEntryId) {
             currentChatSessionId = event.detail.conversationEntryId;
-            
-            // Enviar a ambos sistemas
             sendToMarketingCloud(currentChatSessionId);
-            
-            console.log('✅ Session ID capturado:', currentChatSessionId);
+            console.log('✅ Session ID capturado (evento):', currentChatSessionId);
             updateContextDisplay();
         }
     });
     
-    // Intercept fetch para capturar session ID de requests
+    // Intercept fetch para capturar session ID de múltiples fuentes
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
         const [url, options] = args;
         
-        if (options && options.body && (url.includes('conversation') || url.includes('messaging'))) {
+        // Capturar de URL params
+        try {
+            const urlObj = new URL(url, window.location.origin);
+            const conversationIdFromUrl = urlObj.searchParams.get('conversationEntryId') || 
+                                         urlObj.searchParams.get('conversationId');
+            
+            if (conversationIdFromUrl && !currentChatSessionId) {
+                currentChatSessionId = conversationIdFromUrl;
+                sendToMarketingCloud(conversationIdFromUrl);
+                updateContextDisplay();
+                console.log('✅ Session ID capturado (URL params):', conversationIdFromUrl);
+            }
+        } catch (e) {}
+        
+        // Capturar del request body
+        if (options && options.body && (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry'))) {
             try {
                 const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
                 
+                // De acks array
                 if (body.acks && Array.isArray(body.acks)) {
                     body.acks.forEach(ack => {
                         if (ack.conversationEntryId && !currentChatSessionId) {
                             currentChatSessionId = ack.conversationEntryId;
-                            sendToMarketingCloud(currentChatSessionId);
+                            sendToMarketingCloud(ack.conversationEntryId);
                             updateContextDisplay();
+                            console.log('✅ Session ID capturado (acks array):', ack.conversationEntryId);
                         }
                     });
+                }
+                
+                // Directamente del body
+                if (body.conversationEntryId && !currentChatSessionId) {
+                    currentChatSessionId = body.conversationEntryId;
+                    sendToMarketingCloud(body.conversationEntryId);
+                    updateContextDisplay();
+                    console.log('✅ Session ID capturado (request body):', body.conversationEntryId);
+                }
+                
+                if (body.conversationId && !currentChatSessionId) {
+                    currentChatSessionId = body.conversationId;
+                    sendToMarketingCloud(body.conversationId);
+                    updateContextDisplay();
+                    console.log('✅ Session ID capturado (conversationId):', body.conversationId);
+                }
+                
+                // De routingAttributes
+                if (body.routingAttributes) {
+                    const convId = body.routingAttributes.conversationEntryId || body.routingAttributes.conversationId;
+                    if (convId && !currentChatSessionId) {
+                        currentChatSessionId = convId;
+                        sendToMarketingCloud(convId);
+                        updateContextDisplay();
+                        console.log('✅ Session ID capturado (routingAttributes):', convId);
+                    }
                 }
             } catch (e) {}
         }
         
-        return originalFetch.apply(this, args);
+        // Interceptar response
+        return originalFetch.apply(this, args).then(response => {
+            if (response.url.includes('conversation') || response.url.includes('messaging') || response.url.includes('embeddedservice')) {
+                const clonedResponse = response.clone();
+                clonedResponse.json().then(data => {
+                    if (data && !currentChatSessionId) {
+                        const convId = data.conversationEntryId || data.conversationId || data.id;
+                        if (convId) {
+                            currentChatSessionId = convId;
+                            sendToMarketingCloud(convId);
+                            updateContextDisplay();
+                            console.log('✅ Session ID capturado (response):', convId);
+                        }
+                    }
+                }).catch(() => {});
+            }
+            return response;
+        });
     };
     
     // ========================================
