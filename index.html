@@ -573,29 +573,29 @@ Timestamp: ${context.timestamp}`;
     function trackChatOpen(sessionId) {
         currentChatSessionId = sessionId;
         
+        // Capturar datos de contexto
+        const pageUrl = window.location.href;
+        const pageTitle = document.title;
+        const userLanguage = navigator.language || navigator.userLanguage;
+        
+        // ⭐ ENVIAR EVENTO USANDO user.attributes (MÉTODO OFICIAL) ⭐
         SalesforceInteractions.sendEvent({
-            interaction: {
-                name: "Chat Opened",
-                catalogObject: {
-                    type: "ChatInteraction",
-                    id: sessionId || 'chat_' + Date.now(),
-                    attributes: {
-                        sessionId: sessionId,
-                        pageUrl: window.location.href,
-                        pageSection: getCurrentSection(),
-                        timestamp: new Date().toISOString()
-                    }
-                }
-            },
             user: {
                 attributes: {
                     chatSessionId: sessionId,
-                    pageAtChatOpen: window.location.href
+                    currentPageUrl: pageUrl,
+                    currentPageTitle: pageTitle,
+                    userLanguage: userLanguage,
+                    chatStartTime: new Date().toISOString()
                 }
             }
         });
         
         console.log('💬 Chat abierto con sesión ID:', sessionId);
+        console.log('📤 Datos enviados a Salesforce Interactions:');
+        console.log('   → URL:', pageUrl);
+        console.log('   → Título:', pageTitle);
+        console.log('   → Idioma:', userLanguage);
     }
     
     // Trackear mensajes enviados al chat
