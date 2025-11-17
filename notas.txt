@@ -1,21 +1,85 @@
-trigger MessagingSessionContext on MessagingSession (after insert) {
-    for (MessagingSession ms : Trigger.new) {
-        // Buscar el primer mensaje de la conversación
-        List<ConversationEntry> entries = [
-            SELECT MessageText 
-            FROM ConversationEntry 
-            WHERE ConversationIdentifier = :ms.ConversationIdentifier 
-            ORDER BY CreatedDate ASC 
-            LIMIT 1
-        ];
+// TRIGGER: MessagingSessionTrigger
+// Objeto: MessagingSession
+// Evento: after insert
+
+trigger MessagingSessionTrigger on MessagingSession (after insert) {
+    MessagingSessionTriggerHandler.handleAfterInsert(Trigger.new);
+}
+
+// HANDLER CLASS: MessagingSessionTriggerHandler
+
+public class MessagingSessionTriggerHandler {
+    
+    public static void handleAfterInsert(List<MessagingSession> newSessions) {
+        // Retrasar la ejecución para que ConversationEntry se cree primero
+        System.enqueueJob(new ProcessMessagingSessionJob(
+            new Map<Id, MessagingSession>(newSessions).keySet()
+        ));
+    }
+    
+    // Queueable para procesamiento asíncrono
+    public class ProcessMessagingSessionJob implements System.Queueable {
+        private Set<Id> sessionIds;
         
-        if (!entries.isEmpty() && entries[0].MessageText.contains('📊 Contexto')) {
-            String context = entries[0].MessageText;
-            // Parsear y guardar en campos personalizados
-            ms.Page_Title__c = extractValue(context, 'Título:');
-            ms.Page_URL__c = extractValue(context, 'URL:');
-            // etc...
-            update ms;
+        public ProcessMessagingSessionJob(Set<Id> ids) {
+            this.sessionIds = ids;
+        }
+        
+        public void execute(System.QueueableContext context) {
+            List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
+            
+            // Consultar ConversationEntry relacionados
+            Map<Id, List<ConversationEntry>> entriesByConversation = new Map<Id, List<ConversationEntry>>();
+            
+            for (ConversationEntry entry : [
+                SELECT Id, ConversationId, Message, EntryTime, ActorType
+                FROM ConversationEntry 
+                WHERE ConversationId IN :sessionIds
+                AND ActorType = 'EndUser'
+                ORDER BY EntryTime ASC
+                LIMIT 100
+            ]) {
+                if (!entriesByConversation.containsKey(entry.ConversationId)) {
+                    entriesByConversation.put(entry.ConversationId, new List<ConversationEntry>());
+                }
+                entriesByConversation.get(entry.ConversationId).add(entry);
+            }
+            
+            // Procesar MessagingSessions
+            for (MessagingSession ms : [
+                SELECT Id, ConversationId, Page_Title__c, Page_URL__c, User_Language__c
+                FROM MessagingSession 
+                WHERE Id IN :sessionIds
+            ]) {
+                List<ConversationEntry> entries = entriesByConversation.get(ms.ConversationId);
+                
+                if (entries != null && !entries.isEmpty()) {
+                    String message = entries[0].Message;
+                    
+                    // Parsear el contexto si existe
+                    if (message != null && message.contains('📊 Contexto')) {
+                        ms.Page_Title__c = extractValue(message, 'Título:');
+                        ms.Page_URL__c = extractValue(message, 'URL:');
+                        ms.User_Language__c = extractValue(message, 'Idioma:');
+                        sessionsToUpdate.add(ms);
+                    }
+                }
+            }
+            
+            if (!sessionsToUpdate.isEmpty()) {
+                update sessionsToUpdate;
+            }
+        }
+        
+        private String extractValue(String text, String label) {
+            if (text == null || !text.contains(label)) return null;
+            
+            Integer startIndex = text.indexOf(label) + label.length();
+            Integer endIndex = text.indexOf('\n', startIndex);
+            
+            if (endIndex == -1) endIndex = text.length();
+            
+            return text.substring(startIndex, endIndex).trim();
         }
     }
 }
