@@ -329,517 +329,180 @@
         <p>Prueba de concepto - GitHub Seeds</p>
     </footer>
 
-    <!-- Salesforce Interactions SDK (Marketing Cloud Personalization) -->
+    <!-- Salesforce Interactions & Chat Integration -->
     <script type='text/javascript'>
     // ========================================
-    // CONFIGURACIÓN DE SALESFORCE INTERACTIONS
+    // 1. SALESFORCE INTERACTIONS SDK (Marketing Cloud)
     // ========================================
     
-    // Simulación del SDK de Salesforce Interactions
-    // En producción, cargarías el SDK real desde tu cuenta de MC Personalization
     window.SalesforceInteractions = window.SalesforceInteractions || {
         events: [],
-        ConsentPurpose: {
-            Tracking: 'tracking',
-            Personalization: 'personalization'
-        },
-        ConsentStatus: {
-            OptIn: 'optin',
-            OptOut: 'optout'
-        },
         init: function(config) {
             this.config = config;
-            console.log('✓ Salesforce Interactions inicializado:', config);
+            console.log('✓ Salesforce Interactions inicializado');
         },
         sendEvent: function(eventData) {
             this.events.push(eventData);
-            console.log('📤 Evento enviado a Salesforce Interactions:', eventData);
+            console.log('📤 Evento a Marketing Cloud:', eventData);
             return eventData;
-        },
-        setUserIdentity: function(identity) {
-            this.userIdentity = identity;
-            console.log('👤 Identidad de usuario establecida:', identity);
         }
     };
     
-    // Inicializar Salesforce Interactions
     SalesforceInteractions.init({
-        cookieDomain: window.location.hostname,
-        consents: [{
-            purpose: SalesforceInteractions.ConsentPurpose.Tracking,
-            status: SalesforceInteractions.ConsentStatus.OptIn
-        }]
+        cookieDomain: window.location.hostname
     });
     
     // ========================================
-    // FUNCIONES PARA CAPTURAR CONTEXTO DE LA PÁGINA
+    // 2. CAPTURA DE CONTEXTO
     // ========================================
     
-    function getPageContext() {
-        // Capturar información de la página actual
-        const pageContext = {
-            pageUrl: window.location.href,
-            pagePath: window.location.pathname,
-            pageTitle: document.title,
-            pageSection: getCurrentSection(),
-            referrer: document.referrer || 'Acceso directo',
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
-            language: navigator.language || navigator.userLanguage
-        };
-        
-        console.log('📋 Contexto de página capturado:', pageContext);
-        return pageContext;
-    }
-    
-    function getCurrentSection() {
-        // Detectar en qué sección está el usuario
-        const sections = document.querySelectorAll('section[id]');
-        const scrollPosition = window.scrollY + 100;
-        
-        for (let section of sections) {
-            const sectionTop = section.offsetTop;
-            const sectionHeight = section.offsetHeight;
-            
-            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
-                return section.id || 'inicio';
-            }
-        }
-        return 'inicio';
-    }
-    
-    // Obtener tiempo desde que se cargó la página
-    function getPageLoadTime() {
-        if (!window.pageLoadTimestamp) {
-            window.pageLoadTimestamp = new Date().toISOString();
-        }
-        return window.pageLoadTimestamp;
-    }
-    
-    // Variable global para almacenar el ID de sesión del chat
     let currentChatSessionId = null;
     
-    // Trackear cuando se abre el chat
-    function trackChatOpen(sessionId) {
-        currentChatSessionId = sessionId;
+    function getPageContext() {
+        return {
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            language: navigator.language || navigator.userLanguage,
+            referrer: document.referrer || 'Acceso directo'
+        };
+    }
+    
+    // ========================================
+    // 3. ENVÍO DE DATOS (2 MÉTODOS)
+    // ========================================
+    
+    // MÉTODO 1: Enviar a Salesforce Interactions (Marketing Cloud)
+    function sendToMarketingCloud(sessionId) {
+        const context = getPageContext();
         
-        // Capturar datos de contexto
-        const pageUrl = window.location.href;
-        const pageTitle = document.title;
-        const userLanguage = navigator.language || navigator.userLanguage;
-        
-        // ⭐ ENVIAR EVENTO USANDO user.attributes (MÉTODO OFICIAL) ⭐
         SalesforceInteractions.sendEvent({
             user: {
                 attributes: {
                     chatSessionId: sessionId,
-                    currentPageUrl: pageUrl,
-                    currentPageTitle: pageTitle,
-                    userLanguage: userLanguage,
+                    currentPageUrl: context.pageUrl,
+                    currentPageTitle: context.pageTitle,
+                    userLanguage: context.language,
                     chatStartTime: new Date().toISOString()
                 }
             }
         });
         
-        console.log('💬 Chat abierto con sesión ID:', sessionId);
-        console.log('📤 Datos enviados a Salesforce Interactions:');
-        console.log('   → URL:', pageUrl);
-        console.log('   → Título:', pageTitle);
-        console.log('   → Idioma:', userLanguage);
-
-
-        // Esta función envía el contexto actualizado usando Salesforce Interactions
-        const context = getPageContext();
-        
-        // ⭐ ENVIAR EVENTO A SALESFORCE INTERACTIONS ⭐
-        const eventData = {
-            interaction: {
-                name: "Page View",
-                catalogObject: {
-                    type: "WebPage",
-                    id: context.pagePath,
-                    attributes: {
-                        url: context.pageUrl,
-                        title: context.pageTitle,
-                        section: context.pageSection,
-                        referrer: context.referrer,
-                        language: context.language,
-                        resolution: context.screenResolution
-                    }
-                }
-            },
-            user: {
-                attributes: {
-                    currentPage: context.pageUrl,
-                    currentSection: context.pageSection,
-                    pageLoadTime: getPageLoadTime()
-                }
-            }
-        };
-        
-        SalesforceInteractions.sendEvent(eventData);
+        console.log('✅ Datos enviados a Marketing Cloud');
     }
     
-    // Trackear mensajes enviados al chat
-    function trackChatMessage(message, sessionId) {
-        SalesforceInteractions.sendEvent({
-            interaction: {
-                name: "Chat Message Sent",
-                catalogObject: {
-                    type: "ChatMessage",
-                    id: 'msg_' + Date.now(),
-                    attributes: {
-                        sessionId: sessionId || currentChatSessionId,
-                        messageLength: message.length,
-                        timestamp: new Date().toISOString(),
-                        pageSection: getCurrentSection()
-                    }
-                }
-            }
-        });
+    // MÉTODO 2: Enviar a MessagingSession (para el agente)
+    function sendToMessagingSession() {
+        const context = getPageContext();
+        
+        embeddedservice_bootstrap.settings.extraPrechatInfo = [{
+            "entityName": "MessagingSession",
+            "showOnCreate": true,
+            "entityFieldMaps": [
+                { "doCreate": true, "doFind": false, "fieldName": "Page_Title__c", "label": "Page_Title__c" },
+                { "doCreate": true, "doFind": false, "fieldName": "Page_URL__c", "label": "Page_URL__c" },
+                { "doCreate": true, "doFind": false, "fieldName": "User_Language__c", "label": "User_Language__c" }
+            ]
+        }];
+        
+        embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
+            { "label": "Page_Title__c", "value": context.pageTitle, "displayToAgent": true },
+            { "label": "Page_URL__c", "value": context.pageUrl, "displayToAgent": true },
+            { "label": "User_Language__c", "value": context.language, "displayToAgent": true }
+        ];
+        
+        console.log('✅ Datos configurados para MessagingSession');
     }
     
     // ========================================
-    // INICIALIZACIÓN DEL CHAT DE SALESFORCE
+    // 4. INICIALIZACIÓN DEL CHAT
     // ========================================
     
     function initEmbeddedMessaging() {
         try {
-            // Obtener contexto inicial
-            const initialContext = getPageContext();
-            
-            // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // ⭐⭐⭐ CONFIGURACIÓN COMPLETA DE PRECHAT DATA ⭐⭐⭐
+            // Configurar datos de contexto ANTES de inicializar
+            sendToMessagingSession();
             
-            // extraPrechatInfo: Define QUÉ datos enviar (entityName es CRUCIAL)
-            embeddedservice_bootstrap.settings.extraPrechatInfo = [
-                {
-                    "entityName": "MessagingSession",
-                    "showOnCreate": true,
-                    "entityFieldMaps": [
-                        {
-                            "doCreate": true,
-                            "doFind": false,
-                            "fieldName": "Page_Title__c",
-                            "isExactMatch": true,
-                            "label": "Page_Title__c"
-                        },
-                        {
-                            "doCreate": true,
-                            "doFind": false,
-                            "fieldName": "Page_URL__c",
-                            "isExactMatch": true,
-                            "label": "Page_URL__c"
-                        },
-                        {
-                            "doCreate": true,
-                            "doFind": false,
-                            "fieldName": "Page_Section__c",
-                            "isExactMatch": true,
-                            "label": "Page_Section__c"
-                        },
-                        {
-                            "doCreate": true,
-                            "doFind": false,
-                            "fieldName": "Referrer__c",
-                            "isExactMatch": true,
-                            "label": "Referrer__c"
-                        },
-                        {
-                            "doCreate": true,
-                            "doFind": false,
-                            "fieldName": "User_Language__c",
-                            "isExactMatch": true,
-                            "label": "User_Language__c"
-                        }
-                    ]
-                }
-            ];
-            
-            console.log('📋 ✅ Prechat Info (Mapping):', embeddedservice_bootstrap.settings.extraPrechatInfo);
-            console.log('📋 ✅ Prechat Form Details (Values):', embeddedservice_bootstrap.settings.extraPrechatFormDetails);
-
-            // Inicializar el servicio
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
                 'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
-                {
-                    scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
-                }
+                { scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com' }
             );
            
-            console.log('✓ Chat de Salesforce inicializado correctamente');
-            console.log('✓ Datos de contexto COMPLETOS configurados para el agente');
-           
+            console.log('✓ Chat inicializado');
         } catch (err) {
-            console.error('❌ Error al inicializar el chat:', err);
+            console.error('❌ Error al inicializar chat:', err);
         }
     }
     
     // ========================================
-    // CAPTURAR EVENTOS DEL CHAT (Usando DOM Events)
+    // 5. CAPTURA DE SESSION ID
+    // ========================================
     
-    // Interceptar llamadas de red para capturar el conversationId
-    // (Método robusto que captura request y response)
+    window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
+        if (event.detail && event.detail.conversationEntryId) {
+            currentChatSessionId = event.detail.conversationEntryId;
+            
+            // Enviar a ambos sistemas
+            sendToMarketingCloud(currentChatSessionId);
+            
+            console.log('✅ Session ID capturado:', currentChatSessionId);
+            updateContextDisplay();
+        }
+    });
+    
+    // Intercept fetch para capturar session ID de requests
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
         const [url, options] = args;
         
-        console.log('🌐 Fetch interceptado - URL:', url);
-        
-        // ⭐ CAPTURAR conversationEntryId de la URL (query parameters)
-        try {
-            const urlObj = new URL(url, window.location.origin);
-            const conversationIdFromUrl = urlObj.searchParams.get('conversationEntryId') || 
-                                         urlObj.searchParams.get('conversationId');
-            
-            if (conversationIdFromUrl && !currentChatSessionId) {
-                currentChatSessionId = conversationIdFromUrl;
-                trackChatOpen(conversationIdFromUrl);
-                sendContextToChat(conversationIdFromUrl);
-                updateContextDisplay();
-                console.log('✅ 🎯 Conversation ID capturado de URL params:', conversationIdFromUrl);
-            }
-        } catch (e) {
-            // URL no válida o error al parsear
-        }
-        
-        // Capturar el Request Payload (body)
-        if (options && options.body) {
+        if (options && options.body && (url.includes('conversation') || url.includes('messaging'))) {
             try {
-                const requestBody = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+                const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
                 
-                // Log completo del request para debugging
-                if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry')) {
-                    console.log('📤 Request Payload completo:', {
-                        url: url,
-                        body: requestBody
+                if (body.acks && Array.isArray(body.acks)) {
+                    body.acks.forEach(ack => {
+                        if (ack.conversationEntryId && !currentChatSessionId) {
+                            currentChatSessionId = ack.conversationEntryId;
+                            sendToMarketingCloud(currentChatSessionId);
+                            updateContextDisplay();
+                        }
                     });
-                    
-                    // Buscar en acks array (como se ve en la captura anterior)
-                    if (requestBody && requestBody.acks && Array.isArray(requestBody.acks)) {
-                        requestBody.acks.forEach(ack => {
-                            if (ack.conversationEntryId && !currentChatSessionId) {
-                                currentChatSessionId = ack.conversationEntryId;
-                                trackChatOpen(ack.conversationEntryId);
-                                sendContextToChat(ack.conversationEntryId);
-                                updateContextDisplay();
-                                console.log('✅ 🎯 Conversation Entry ID capturado de acks:', ack.conversationEntryId);
-                            }
-                        });
-                    }
-                    
-                    // Buscar conversationEntryId directamente en el body
-                    if (requestBody && requestBody.conversationEntryId && !currentChatSessionId) {
-                        currentChatSessionId = requestBody.conversationEntryId;
-                        trackChatOpen(requestBody.conversationEntryId);
-                        sendContextToChat(requestBody.conversationEntryId);
-                        updateContextDisplay();
-                        console.log('✅ Conversation Entry ID capturado del Request body:', requestBody.conversationEntryId);
-                    }
-                    
-                    // Buscar conversationId directamente
-                    if (requestBody && requestBody.conversationId && !currentChatSessionId) {
-                        currentChatSessionId = requestBody.conversationId;
-                        trackChatOpen(requestBody.conversationId);
-                        sendContextToChat(requestBody.conversationId);
-                        updateContextDisplay();
-                        console.log('✅ Conversation ID capturado del Request:', requestBody.conversationId);
-                    }
-                    
-                    // Buscar en routingAttributes
-                    if (requestBody && requestBody.routingAttributes) {
-                        if (requestBody.routingAttributes.conversationId && !currentChatSessionId) {
-                            currentChatSessionId = requestBody.routingAttributes.conversationId;
-                            trackChatOpen(requestBody.routingAttributes.conversationId);
-                            sendContextToChat(requestBody.routingAttributes.conversationId);
-                            updateContextDisplay();
-                            console.log('✅ Conversation ID capturado de routingAttributes:', requestBody.routingAttributes.conversationId);
-                        }
-                        if (requestBody.routingAttributes.conversationEntryId && !currentChatSessionId) {
-                            currentChatSessionId = requestBody.routingAttributes.conversationEntryId;
-                            trackChatOpen(requestBody.routingAttributes.conversationEntryId);
-                            sendContextToChat(requestBody.routingAttributes.conversationEntryId);
-                            updateContextDisplay();
-                            console.log('✅ Conversation Entry ID capturado de routingAttributes:', requestBody.routingAttributes.conversationEntryId);
-                        }
-                    }
                 }
-            } catch (e) {
-                console.warn('Error parseando request body:', e);
-            }
+            } catch (e) {}
         }
         
-        // Interceptar también la respuesta
-        return originalFetch.apply(this, args).then(response => {
-            const clonedResponse = response.clone();
-            
-            if (response.url.includes('conversation') || response.url.includes('messaging') || response.url.includes('embeddedservice')) {
-                clonedResponse.json().then(data => {
-                    console.log('🔍 Response capturada de:', response.url);
-                    console.log('🔍 Response data:', data);
-                    
-                    // Buscar conversationEntryId o conversationId en la respuesta
-                    if (data && !currentChatSessionId) {
-                        const convId = data.conversationEntryId || data.conversationId || data.id;
-                        if (convId) {
-                            currentChatSessionId = convId;
-                            trackChatOpen(convId);
-                            sendContextToChat(convId);
-                            updateContextDisplay();
-                            console.log('✅ Conversation ID interceptado de Response:', convId);
-                        }
-                    }
-                }).catch((err) => {
-                    // No es JSON o no se puede parsear
-                    console.log('No se pudo parsear response como JSON:', err.message);
-                });
-            }
-            
-            return response;
-        });
-    };
-    
-    // También interceptar XMLHttpRequest como respaldo
-    const originalXHROpen = XMLHttpRequest.prototype.open;
-    const originalXHRSend = XMLHttpRequest.prototype.send;
-    
-    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-        this._url = url;
-        return originalXHROpen.apply(this, [method, url, ...rest]);
-    };
-    
-    XMLHttpRequest.prototype.send = function(body) {
-        if (this._url && (this._url.includes('embeddedservice') || this._url.includes('messaging') || this._url.includes('conversation'))) {
-            try {
-                const requestData = typeof body === 'string' ? JSON.parse(body) : body;
-                console.log('📤 XHR Request capturado:', requestData);
-                
-                if (requestData && requestData.conversationId && !currentChatSessionId) {
-                    currentChatSessionId = requestData.conversationId;
-                    trackChatOpen(requestData.conversationId);
-                    sendContextToChat(requestData.conversationId);
-                    updateContextDisplay();
-                    console.log('✅ Conversation ID capturado de XHR:', requestData.conversationId);
-                }
-            } catch (e) {
-                // Ignorar errores
-            }
-            
-            // Interceptar respuesta
-            this.addEventListener('load', function() {
-                try {
-                    const responseData = JSON.parse(this.responseText);
-                    console.log('🔍 XHR Response capturada:', responseData);
-                    
-                    if (responseData && !currentChatSessionId) {
-                        const convId = responseData.conversationEntryId || responseData.conversationId || responseData.id;
-                        if (convId) {
-                            currentChatSessionId = convId;
-                            trackChatOpen(convId);
-                            sendContextToChat(convId);
-                            updateContextDisplay();
-                            console.log('✅ Conversation ID interceptado de XHR Response:', convId);
-                        }
-                    }
-                } catch (e) {
-                    // Ignorar errores
-                }
-            });
-        }
-        
-        return originalXHRSend.apply(this, arguments);
+        return originalFetch.apply(this, args);
     };
     
     // ========================================
-    // EVENT LISTENERS
-    // ========================================
-    
-    // Variable para trackear la sección anterior
-    let previousSection = getCurrentSection();
-    
-    // Actualizar contexto cuando el usuario cambia de sección
-    window.addEventListener('scroll', function() {
-        // Debounce para no ejecutar demasiado frecuentemente
-        clearTimeout(window.scrollTimeout);
-        window.scrollTimeout = setTimeout(function() {
-            const currentSection = getCurrentSection();
-            
-            // Si cambió de sección, trackear el cambio
-            if (currentSection !== previousSection) {
-                trackSectionChange(previousSection, currentSection);
-                previousSection = currentSection;
-            }
-            
-            sendContextToChat();
-        }, 500);
-    });
-    
-    // ========================================
-    // ACTUALIZAR DISPLAY DE CONTEXTO EN LA PÁGINA
+    // 6. UI UPDATE
     // ========================================
     
     function updateContextDisplay() {
         const context = getPageContext();
+        const eventCount = SalesforceInteractions.events.length;
         
-        // Actualizar elementos en la página
         document.getElementById('context-url').textContent = context.pageUrl;
         document.getElementById('context-title').textContent = context.pageTitle;
-        document.getElementById('context-section').textContent = context.pageSection;
         document.getElementById('context-referrer').textContent = context.referrer;
         document.getElementById('context-language').textContent = context.language;
-        document.getElementById('context-resolution').textContent = context.screenResolution;
-        document.getElementById('context-timestamp').textContent = new Date(context.timestamp).toLocaleString('es-ES');
+        document.getElementById('context-timestamp').textContent = new Date().toLocaleString('es-ES');
+        document.getElementById('context-events').textContent = `${eventCount} evento${eventCount !== 1 ? 's' : ''}`;
         
-        // Mostrar ID de sesión del chat si existe
         const sessionIdElement = document.getElementById('context-session-id');
         if (currentChatSessionId) {
             sessionIdElement.textContent = currentChatSessionId;
             sessionIdElement.style.color = '#28a745';
             sessionIdElement.style.fontWeight = 'bold';
-        } else {
-            sessionIdElement.textContent = 'No iniciado';
-            sessionIdElement.style.color = '#999';
-            sessionIdElement.style.fontWeight = 'normal';
-        }
-        
-        // Mostrar cantidad de eventos trackeados
-        const eventCount = SalesforceInteractions.events ? SalesforceInteractions.events.length : 0;
-        document.getElementById('context-events').textContent = `${eventCount} evento${eventCount !== 1 ? 's' : ''}`;
-        
-        console.log('✓ Display de contexto actualizado');
-        console.log(`📊 Total de eventos trackeados: ${eventCount}`);
-        if (currentChatSessionId) {
-            console.log(`💬 ID de sesión activa: ${currentChatSessionId}`);
         }
     }
     
-    // Actualizar el display cuando carga la página
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            updateContextDisplay();
-            // Enviar evento inicial de carga de página
-            
-            sendContextToChat(currentChatSessionId);
-        }, 500);
-    });
-    
-    // Actualizar también al hacer scroll
-    window.addEventListener('scroll', function() {
-        clearTimeout(window.contextDisplayTimeout);
-        window.contextDisplayTimeout = setTimeout(function() {
-            const newSection = getCurrentSection();
-            document.getElementById('context-section').textContent = newSection;
-            
-            // Actualizar contador de eventos
-            const eventCount = SalesforceInteractions.events ? SalesforceInteractions.events.length : 0;
-            document.getElementById('context-events').textContent = `${eventCount} evento${eventCount !== 1 ? 's' : ''}`;
-        }, 300);
-    });    </script>
-    <script type='text/javascript' src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
+    // Actualizar al cargar
+    window.addEventListener('load', () => setTimeout(updateContextDisplay, 500));
+    </script>
+    <script src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
 </body>
 </html>
