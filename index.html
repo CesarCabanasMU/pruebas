@@ -270,18 +270,8 @@
                 <strong>🕐 Timestamp:</strong>
                 <span id="context-timestamp">Cargando...</span>
             </div>
-            <div class="context-item">
-                <strong>💬 ID Sesión Chat:</strong>
-                <span id="context-session-id" style="color: #999;">No iniciado</span>
-            </div>
             
             <button class="update-btn" onclick="updateContextDisplay()">🔄 Actualizar Contexto</button>
-            
-            <div style="margin-top: 1.5rem; padding: 1rem; background: #f0f8ff; border-radius: 4px;">
-                <p style="margin: 0 0 0.5rem 0; color: #555; font-size: 0.9rem;">
-                    <strong>🔑 ID de Sesión:</strong> Se capturará automáticamente cuando inicies una conversación con el chatbot.
-                </p>
-            </div>
         </div>
 
         <section class="hero" id="inicio">
@@ -318,8 +308,6 @@
     // ========================================
     // 1. CAPTURA DE CONTEXTO
     // ========================================
-    
-    let currentChatSessionId = null;
     
     function getPageContext() {
         return {
@@ -368,8 +356,7 @@
         try {
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // ⚠️ PROBLEMA: Los datos se configuran ANTES de init()
-            // y no se pueden actualizar después de que la sesión ya está creada
+            // Configurar datos ANTES de inicializar
             sendToMessagingSession();
             
             embeddedservice_bootstrap.init(
@@ -386,140 +373,7 @@
     }
     
     // ========================================
-    // 4. CAPTURA DE SESSION ID & DEBUGGING
-    // ========================================
-    
-    // Log TODOS los eventos de Salesforce para ver qué hay disponible
-    console.log('🔍 Registrando listeners para TODOS los eventos de Embedded Messaging...');
-    
-    // Evento cuando el chat está listo
-    window.addEventListener('onEmbeddedMessagingReady', function(event) {
-        console.log('🎯 onEmbeddedMessagingReady:', event);
-        console.log('🎯 event.detail:', event.detail);
-    });
-    
-    // Evento cuando inicia conversación
-    window.addEventListener('onEmbeddedMessagingConversationStart', function(event) {
-        console.log('🚀 onEmbeddedMessagingConversationStart - EVENTO COMPLETO:', event);
-        console.log('🚀 event.detail COMPLETO:', JSON.stringify(event.detail, null, 2));
-        
-        if (event.detail) {
-            console.log('🔑 Propiedades disponibles en event.detail:', Object.keys(event.detail));
-            
-            // Intentar múltiples propiedades posibles
-            const possibleIds = {
-                conversationEntryId: event.detail.conversationEntryId,
-                conversationId: event.detail.conversationId,
-                id: event.detail.id,
-                sessionId: event.detail.sessionId,
-                messageSessionId: event.detail.messageSessionId,
-                messagingSessionId: event.detail.messagingSessionId
-            };
-            
-            console.log('🔑 IDs posibles encontrados:', possibleIds);
-            
-            // Usar el primer ID que no sea undefined
-            currentChatSessionId = possibleIds.conversationEntryId || 
-                                   possibleIds.conversationId || 
-                                   possibleIds.id ||
-                                   possibleIds.sessionId ||
-                                   possibleIds.messageSessionId ||
-                                   possibleIds.messagingSessionId;
-            
-            if (currentChatSessionId) {
-                console.log('✅ Session ID capturado:', currentChatSessionId);
-                updateContextDisplay();
-            } else {
-                console.error('❌ NO se encontró ningún ID en event.detail');
-            }
-        } else {
-            console.error('❌ event.detail es undefined');
-        }
-    });
-    
-    // Otros eventos útiles
-    window.addEventListener('onEmbeddedMessagingInitSuccess', function(event) {
-        console.log('✅ onEmbeddedMessagingInitSuccess:', event);
-        console.log('✅ event.detail:', event.detail);
-    });
-    
-    window.addEventListener('onEmbeddedMessagingSettingsLoaded', function(event) {
-        console.log('⚙️ onEmbeddedMessagingSettingsLoaded:', event);
-        console.log('⚙️ event.detail:', event.detail);
-    });
-    
-    // ========================================
-    // 5. INTERCEPCIÓN DE REQUESTS (DEBUG MODE)
-    // ========================================
-    
-    const originalFetch = window.fetch;
-    window.fetch = function(...args) {
-        const [url, options] = args;
-        
-        // LOG DETALLADO de todas las requests relacionadas con messaging
-        if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice') || url.includes('entry')) {
-            console.log('🌐 FETCH REQUEST:', {
-                url: url,
-                method: options?.method,
-                hasBody: !!options?.body
-            });
-            
-            // Log del body si existe
-            if (options && options.body) {
-                try {
-                    const body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
-                    console.log('📤 REQUEST BODY COMPLETO:', JSON.stringify(body, null, 2));
-                } catch (e) {
-                    console.log('📤 REQUEST BODY (no JSON):', options.body);
-                }
-            }
-        }
-        
-        // Interceptar response
-        return originalFetch.apply(this, args).then(response => {
-            if (url.includes('conversation') || url.includes('messaging') || url.includes('embeddedservice')) {
-                const clonedResponse = response.clone();
-                clonedResponse.json().then(data => {
-                    console.log('📥 RESPONSE de', url, ':', JSON.stringify(data, null, 2));
-                    
-                    // Buscar posibles IDs en la respuesta
-                    if (data) {
-                        const possibleIds = {
-                            conversationEntryId: data.conversationEntryId,
-                            conversationId: data.conversationId,
-                            id: data.id,
-                            sessionId: data.sessionId,
-                            messageSessionId: data.messageSessionId,
-                            messagingSessionId: data.messagingSessionId
-                        };
-                        
-                        console.log('🔍 IDs encontrados en response:', possibleIds);
-                        
-                        if (!currentChatSessionId) {
-                            const foundId = possibleIds.conversationEntryId || 
-                                          possibleIds.conversationId || 
-                                          possibleIds.id ||
-                                          possibleIds.sessionId ||
-                                          possibleIds.messageSessionId ||
-                                          possibleIds.messagingSessionId;
-                            
-                            if (foundId) {
-                                currentChatSessionId = foundId;
-                                updateContextDisplay();
-                                console.log('✅ Session ID capturado de RESPONSE:', foundId);
-                            }
-                        }
-                    }
-                }).catch((e) => {
-                    console.log('⚠️ Response no es JSON o error:', e.message);
-                });
-            }
-            return response;
-        });
-    };
-    
-    // ========================================
-    // 6. UI UPDATE
+    // 4. UI UPDATE
     // ========================================
     
     function updateContextDisplay() {
@@ -530,13 +384,6 @@
         document.getElementById('context-referrer').textContent = context.referrer;
         document.getElementById('context-language').textContent = context.language;
         document.getElementById('context-timestamp').textContent = new Date().toLocaleString('es-ES');
-        
-        const sessionIdElement = document.getElementById('context-session-id');
-        if (currentChatSessionId) {
-            sessionIdElement.textContent = currentChatSessionId;
-            sessionIdElement.style.color = '#28a745';
-            sessionIdElement.style.fontWeight = 'bold';
-        }
     }
     
     // Actualizar al cargar
