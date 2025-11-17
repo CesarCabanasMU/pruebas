@@ -752,6 +752,25 @@ Timestamp: ${context.timestamp}`;
             sendContextToChat(detail.conversationEntryId);
             updateContextDisplay();
             console.log('✅ Conversation Entry ID capturado:', detail.conversationEntryId);
+            
+            // ⭐ ENVIAR CONTEXTO AL AGENTE COMO MENSAJE DEL SISTEMA ⭐
+            setTimeout(function() {
+                const context = getPageContext();
+                const contextMessage = `[CONTEXTO DEL USUARIO]
+                📄 Página: ${context.pageTitle}
+                🌐 URL: ${context.pageUrl}
+                📍 Sección: ${context.pageSection}
+                🌍 Idioma: ${context.language}
+                🔗 Referencia: ${context.referrer}
+
+                Este usuario está navegando desde la página web externa. Usa esta información para responder sus preguntas sobre dónde se encuentra.`;
+
+                // Intentar enviar mensaje usando la API del chat
+                if (typeof embeddedservice_bootstrap !== 'undefined' && embeddedservice_bootstrap.sendMessage) {
+                    embeddedservice_bootstrap.sendMessage(contextMessage, { hidden: true });
+                    console.log('✅ Contexto enviado al agente como mensaje del sistema');
+                }
+            }, 2000); // Esperar 2 segundos después de que inicie la conversación
         }
     });
     
