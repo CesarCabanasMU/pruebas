@@ -328,19 +328,6 @@
             
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // SOLUCIÓN: Usar directToAgentRouting con custom routing attributes
-            embeddedservice_bootstrap.settings.directToAgentRouting = {
-                buttonId: '5731w00000001FN', // Reemplaza con tu Button ID real
-                routingAttributes: {
-                    pageTitle: context.pageTitle,
-                    pageURL: context.pageUrl,
-                    userLanguage: context.language,
-                    referrer: context.referrer
-                }
-            };
-            
-            console.log('✅ Routing attributes configurados:', embeddedservice_bootstrap.settings.directToAgentRouting);
-            
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
@@ -348,11 +335,66 @@
                 { scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com' }
             );
            
-            console.log('✓ Chat inicializado con routing attributes');
-            console.log('ℹ️ Los routing attributes se envían al crear la conversación');
+            console.log('✓ Chat inicializado');
+            
+            // Esperar a que se cree la sesión y obtener el ID
+            setTimeout(() => {
+                // Intentar obtener el MessagingSession ID cuando se abra el chat
+                const checkSession = setInterval(() => {
+                    // El ID de sesión se puede obtener del localStorage o cookies
+                    const sessionData = localStorage.getItem('ESW_CONVERSATION_ID');
+                    
+                    if (sessionData) {
+                        clearInterval(checkSession);
+                        console.log('🔍 Session ID encontrado:', sessionData);
+                        
+                        // Enviar contexto al Apex REST endpoint
+                        sendContextToSalesforce(sessionData, context);
+                    }
+                }, 1000);
+                
+                // Timeout después de 30 segundos
+                setTimeout(() => clearInterval(checkSession), 30000);
+            }, 2000);
+            
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
         }
+    }
+    
+    // Función para enviar contexto via REST API
+    function sendContextToSalesforce(sessionId, context) {
+        const endpoint = 'https://onecrminetum--test.sandbox.my.salesforce.com/services/apexrest/messaging/context';
+        
+        const payload = {
+            sessionId: sessionId,
+            pageTitle: context.pageTitle,
+            pageURL: context.pageUrl,
+            userLanguage: context.language,
+            referrer: context.referrer
+        };
+        
+        console.log('📤 Enviando contexto a Salesforce:', payload);
+        
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Contexto guardado en Salesforce:', data);
+            } else {
+                console.error('❌ Error al guardar:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error de red:', error);
+            console.log('ℹ️ Verifica que el endpoint REST esté configurado en Salesforce');
+        });
     }
     
     // ========================================

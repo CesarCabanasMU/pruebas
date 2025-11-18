@@ -1,41 +1,54 @@
-// ===== OPCIÓN 2: PLATFORM EVENT =====
+// ===== SOLUCIÓN COMPLETA: APEX + FLOW =====
 
-// 1. Crear Platform Event en Salesforce:
-//    Setup → Platform Events → New Platform Event
-//    API Name: Messaging_Context__e
-//    Fields:
-//      - Session_Id__c (Text, 18)
-//      - Page_Title__c (Text, 255)
-//      - Page_URL__c (Text, 255)
-//      - User_Language__c (Text, 50)
+// 1. CREAR CLASE APEX INVOCABLE:
+// Developer Console → File → New → Apex Class
+// Name: ParseRoutingAttributes
 
-// 2. Trigger que escucha el Platform Event:
-
-trigger MessagingContextEventTrigger on Messaging_Context__e (after insert) {
-    List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
-    Set<Id> sessionIds = new Set<Id>();
+public class ParseRoutingAttributes {
     
-    for (Messaging_Context__e event : Trigger.new) {
-        if (event.Session_Id__c != null) {
-            sessionIds.add(event.Session_Id__c);
-        }
-    }
-    
-    if (!sessionIds.isEmpty()) {
-        Map<Id, MessagingSession> sessionMap = new Map<Id, MessagingSession>([
-            SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
-            FROM MessagingSession
-            WHERE Id IN :sessionIds
-        ]);
+    @InvocableMethod(label='Parse Routing Attributes' description='Parse JSON routing attributes and update MessagingSession')
+    public static void parseAndUpdate(List<Id> messagingSessionIds) {
         
-        for (Messaging_Context__e event : Trigger.new) {
-            MessagingSession ms = sessionMap.get(event.Session_Id__c);
-            if (ms != null) {
-                ms.Page_Title__c = event.Page_Title__c;
-                ms.Page_URL__c = event.Page_URL__c;
-                ms.User_Language__c = event.User_Language__c;
-                sessionsToUpdate.add(ms);
-            }
+        List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
+        
+        // Buscar AgentWork relacionados
+        Map<Id, AgentWork> agentWorkMap = new Map<Id, AgentWork>();
+        for (AgentWork aw : [
+            SELECT Id, WorkItemId, CapacityWeight, CapacityPercentage, 
+                   ServiceChannelId, UserId, AgentWorkId
+            FROM AgentWork 
+            WHERE WorkItemId IN :messagingSessionIds
+            LIMIT 100
+        ]) {
+            agentWorkMap.put(aw.WorkItemId, aw);
+        }
+        
+        // Obtener PendingServiceRouting que contiene RoutingAttributes
+        Map<Id, PendingServiceRouting> routingMap = new Map<Id, PendingServiceRouting>();
+        for (PendingServiceRouting psr : [
+            SELECT Id, WorkItemId, RoutingModel, RoutingPriority, 
+                   CapacityWeight, CapacityPercentage, IsReadyForRouting, RoutingType
+            FROM PendingServiceRouting
+            WHERE WorkItemId IN :messagingSessionIds
+            ORDER BY CreatedDate DESC
+            LIMIT 100
+        ]) {
+            routingMap.put(psr.WorkItemId, psr);
+        }
+        
+        // Procesar cada MessagingSession
+        for (MessagingSession ms : [
+            SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
+            FROM MessagingSession 
+            WHERE Id IN :messagingSessionIds
+        ]) {
+            // Intentar obtener routing attributes del contexto
+            // NOTA: Los routing attributes se pierden después del routing
+            // Por eso es mejor capturarlos en el momento de creación
+            
+            // Si no hay datos, dejar los campos vacíos
+            // La solución real requiere capturar antes del routing
+            sessionsToUpdate.add(ms);
         }
         
         if (!sessionsToUpdate.isEmpty()) {
@@ -44,46 +57,31 @@ trigger MessagingContextEventTrigger on Messaging_Context__e (after insert) {
     }
 }
 
-// ===== OPCIÓN 3: APEX REST SERVICE =====
+// ===== PROBLEMA: Los routing attributes NO se guardan en objetos =====
+// Los routing attributes solo existen durante el proceso de routing
+// Una vez asignado, se pierden
 
-// Crear Apex REST que reciba los datos desde JavaScript:
+// ===== SOLUCIÓN REAL: Trigger en MessagingSession =====
 
-@RestResource(urlMapping='/messaging/context/*')
-global class MessagingContextService {
+trigger MessagingSessionContextTrigger on MessagingSession (after insert) {
+    // Los routing attributes NO están disponibles aquí
+    // Salesforce NO los expone en objetos estándar
     
-    @HttpPost
-    global static String receiveContext() {
-        RestRequest req = RestContext.request;
-        Map<String, Object> params = (Map<String, Object>) JSON.deserializeUntyped(req.requestBody.toString());
-        
-        String sessionId = (String) params.get('sessionId');
-        String pageTitle = (String) params.get('pageTitle');
-        String pageURL = (String) params.get('pageURL');
-        String userLanguage = (String) params.get('userLanguage');
-        
-        try {
-            MessagingSession ms = [
-                SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
-                FROM MessagingSession
-                WHERE Id = :sessionId
-                LIMIT 1
-            ];
-            
-            ms.Page_Title__c = pageTitle;
-            ms.Page_URL__c = pageURL;
-            ms.User_Language__c = userLanguage;
-            
-            update ms;
-            
-            return JSON.serialize(new Map<String, Object>{
-                'success' => true,
-                'message' => 'Context saved successfully'
-            });
-        } catch (Exception e) {
-            return JSON.serialize(new Map<String, Object>{
-                'success' => false,
-                'error' => e.getMessage()
-            });
-        }
-    }
+    // La ÚNICA forma de capturarlos es:
+    // 1. Usar Einstein Bot para hacer preguntas y guardar respuestas
+    // 2. Usar formulario pre-chat visible
+    // 3. Enviar datos vía API REST después de crear la sesión
 }
+
+// ===== SOLUCIÓN FUNCIONAL: Pre-Chat Form + Apex =====
+
+// En lugar de routing attributes, usa Pre-Chat Form con campos mapeados
+// JavaScript:
+embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
+    FirstName: "Web",
+    LastName: "Visitor",
+    Email: "visitor@example.com"
+};
+
+// Y en Salesforce Setup:
+// Pre-Chat Form → Map fields to MessagingSession custom fields
