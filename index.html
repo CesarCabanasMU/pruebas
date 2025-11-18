@@ -337,25 +337,33 @@
            
             console.log('✓ Chat inicializado');
             
-            // Esperar a que se cree la sesión y obtener el ID
-            setTimeout(() => {
-                // Intentar obtener el MessagingSession ID cuando se abra el chat
-                const checkSession = setInterval(() => {
-                    // El ID de sesión se puede obtener del localStorage o cookies
-                    const sessionData = localStorage.getItem('ESW_CONVERSATION_ID');
+            // Guardar contexto para enviar cuando el usuario envíe el primer mensaje
+            sessionStorage.setItem('webContext', JSON.stringify(context));
+            
+            // Escuchar eventos del chat
+            window.addEventListener('message', (event) => {
+                // Verificar que el mensaje viene del iframe del chat
+                if (event.origin.includes('salesforce')) {
+                    console.log('📨 Mensaje recibido del chat:', event.data);
                     
-                    if (sessionData) {
-                        clearInterval(checkSession);
-                        console.log('🔍 Session ID encontrado:', sessionData);
-                        
-                        // Enviar contexto al Apex REST endpoint
-                        sendContextToSalesforce(sessionData, context);
+                    // Intentar capturar el ID de conversación del mensaje
+                    if (event.data && typeof event.data === 'string') {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data.conversationId || data.sessionId) {
+                                const sessionId = data.conversationId || data.sessionId;
+                                console.log('🔍 Session ID capturado:', sessionId);
+                                sendContextToSalesforce(sessionId, context);
+                            }
+                        } catch (e) {
+                            // Ignorar si no es JSON
+                        }
                     }
-                }, 1000);
-                
-                // Timeout después de 30 segundos
-                setTimeout(() => clearInterval(checkSession), 30000);
-            }, 2000);
+                }
+            });
+            
+            console.log('📋 Esperando que el usuario abra el chat...');
+            console.log('ℹ️ El contexto se enviará automáticamente cuando se capture el Session ID');
             
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
@@ -383,17 +391,25 @@
             },
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📥 Respuesta HTTP:', response.status);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 console.log('✅ Contexto guardado en Salesforce:', data);
+                alert('✅ Contexto enviado correctamente al agente');
             } else {
                 console.error('❌ Error al guardar:', data.message);
+                alert('❌ Error: ' + data.message);
             }
         })
         .catch(error => {
             console.error('❌ Error de red:', error);
-            console.log('ℹ️ Verifica que el endpoint REST esté configurado en Salesforce');
+            console.log('ℹ️ Verifica:');
+            console.log('1. Clase Apex MessagingContextAPI creada en Salesforce');
+            console.log('2. CORS configurado para tu dominio');
+            console.log('3. Site Guest User tiene permisos en MessagingSession');
         });
     }
     

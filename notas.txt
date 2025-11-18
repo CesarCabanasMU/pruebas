@@ -14,7 +14,6 @@ global class MessagingContextAPI {
             String userLanguage = (String) params.get('userLanguage');
             String referrer = (String) params.get('referrer');
             
-            // Buscar MessagingSession
             List<MessagingSession> sessions = [
                 SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
                 FROM MessagingSession
@@ -23,7 +22,7 @@ global class MessagingContextAPI {
             ];
             
             if (sessions.isEmpty()) {
-                return new Response(false, 'MessagingSession not found', null);
+                return new Response(false, 'MessagingSession not found: ' + sessionId, null);
             }
             
             MessagingSession ms = sessions[0];
@@ -36,7 +35,7 @@ global class MessagingContextAPI {
             return new Response(true, 'Context saved successfully', sessionId);
             
         } catch (Exception e) {
-            return new Response(false, e.getMessage(), null);
+            return new Response(false, 'Error: ' + e.getMessage(), null);
         }
     }
     
