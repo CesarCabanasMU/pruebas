@@ -1,87 +1,54 @@
-// ===== SOLUCIÓN COMPLETA: APEX + FLOW =====
-
-// 1. CREAR CLASE APEX INVOCABLE:
-// Developer Console → File → New → Apex Class
-// Name: ParseRoutingAttributes
-
-public class ParseRoutingAttributes {
+@RestResource(urlMapping='/messaging/context/*')
+global class MessagingContextAPI {
     
-    @InvocableMethod(label='Parse Routing Attributes' description='Parse JSON routing attributes and update MessagingSession')
-    public static void parseAndUpdate(List<Id> messagingSessionIds) {
-        
-        List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
-        
-        // Buscar AgentWork relacionados
-        Map<Id, AgentWork> agentWorkMap = new Map<Id, AgentWork>();
-        for (AgentWork aw : [
-            SELECT Id, WorkItemId, CapacityWeight, CapacityPercentage, 
-                   ServiceChannelId, UserId, AgentWorkId
-            FROM AgentWork 
-            WHERE WorkItemId IN :messagingSessionIds
-            LIMIT 100
-        ]) {
-            agentWorkMap.put(aw.WorkItemId, aw);
-        }
-        
-        // Obtener PendingServiceRouting que contiene RoutingAttributes
-        Map<Id, PendingServiceRouting> routingMap = new Map<Id, PendingServiceRouting>();
-        for (PendingServiceRouting psr : [
-            SELECT Id, WorkItemId, RoutingModel, RoutingPriority, 
-                   CapacityWeight, CapacityPercentage, IsReadyForRouting, RoutingType
-            FROM PendingServiceRouting
-            WHERE WorkItemId IN :messagingSessionIds
-            ORDER BY CreatedDate DESC
-            LIMIT 100
-        ]) {
-            routingMap.put(psr.WorkItemId, psr);
-        }
-        
-        // Procesar cada MessagingSession
-        for (MessagingSession ms : [
-            SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
-            FROM MessagingSession 
-            WHERE Id IN :messagingSessionIds
-        ]) {
-            // Intentar obtener routing attributes del contexto
-            // NOTA: Los routing attributes se pierden después del routing
-            // Por eso es mejor capturarlos en el momento de creación
+    @HttpPost
+    global static Response saveContext() {
+        try {
+            RestRequest req = RestContext.request;
+            String body = req.requestBody.toString();
+            Map<String, Object> params = (Map<String, Object>) JSON.deserializeUntyped(body);
             
-            // Si no hay datos, dejar los campos vacíos
-            // La solución real requiere capturar antes del routing
-            sessionsToUpdate.add(ms);
+            String sessionId = (String) params.get('sessionId');
+            String pageTitle = (String) params.get('pageTitle');
+            String pageURL = (String) params.get('pageURL');
+            String userLanguage = (String) params.get('userLanguage');
+            String referrer = (String) params.get('referrer');
+            
+            // Buscar MessagingSession
+            List<MessagingSession> sessions = [
+                SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
+                FROM MessagingSession
+                WHERE Id = :sessionId
+                LIMIT 1
+            ];
+            
+            if (sessions.isEmpty()) {
+                return new Response(false, 'MessagingSession not found', null);
+            }
+            
+            MessagingSession ms = sessions[0];
+            ms.Page_Title__c = pageTitle;
+            ms.Page_URL__c = pageURL;
+            ms.User_Language__c = userLanguage;
+            
+            update ms;
+            
+            return new Response(true, 'Context saved successfully', sessionId);
+            
+        } catch (Exception e) {
+            return new Response(false, e.getMessage(), null);
         }
+    }
+    
+    global class Response {
+        global Boolean success;
+        global String message;
+        global String sessionId;
         
-        if (!sessionsToUpdate.isEmpty()) {
-            update sessionsToUpdate;
+        global Response(Boolean success, String message, String sessionId) {
+            this.success = success;
+            this.message = message;
+            this.sessionId = sessionId;
         }
     }
 }
-
-// ===== PROBLEMA: Los routing attributes NO se guardan en objetos =====
-// Los routing attributes solo existen durante el proceso de routing
-// Una vez asignado, se pierden
-
-// ===== SOLUCIÓN REAL: Trigger en MessagingSession =====
-
-trigger MessagingSessionContextTrigger on MessagingSession (after insert) {
-    // Los routing attributes NO están disponibles aquí
-    // Salesforce NO los expone en objetos estándar
-    
-    // La ÚNICA forma de capturarlos es:
-    // 1. Usar Einstein Bot para hacer preguntas y guardar respuestas
-    // 2. Usar formulario pre-chat visible
-    // 3. Enviar datos vía API REST después de crear la sesión
-}
-
-// ===== SOLUCIÓN FUNCIONAL: Pre-Chat Form + Apex =====
-
-// En lugar de routing attributes, usa Pre-Chat Form con campos mapeados
-// JavaScript:
-embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
-    FirstName: "Web",
-    LastName: "Visitor",
-    Email: "visitor@example.com"
-};
-
-// Y en Salesforce Setup:
-// Pre-Chat Form → Map fields to MessagingSession custom fields
