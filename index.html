@@ -392,20 +392,57 @@
             body: JSON.stringify(payload)
         })
         .then(response => {
-            console.log('📥 Respuesta HTTP:', response.status);
-            return response.json();
+            console.log('📥 Response Status:', response.status);
+            console.log('📥 Response Headers:', {
+                contentType: response.headers.get('content-type'),
+                date: response.headers.get('date'),
+                server: response.headers.get('server')
+            });
+            
+            // Guardar el status para usarlo después
+            const status = response.status;
+            
+            // Intentar parsear la respuesta como JSON
+            return response.text().then(text => {
+                console.log('📥 Response Body (raw):', text);
+                try {
+                    const data = JSON.parse(text);
+                    console.log('📥 Response Body (parsed):', data);
+                    return { status, data };
+                } catch (e) {
+                    console.warn('⚠️ La respuesta no es JSON válido');
+                    return { status, data: { raw: text } };
+                }
+            });
         })
-        .then(data => {
-            if (data.success) {
-                console.log('✅ Contexto guardado en Salesforce:', data);
+        .then(({ status, data }) => {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📊 RESPUESTA COMPLETA DEL ENDPOINT:');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('Status HTTP:', status);
+            console.log('Datos:', JSON.stringify(data, null, 2));
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
+            if (status === 200 && data.success) {
+                console.log('✅ Contexto guardado en Salesforce exitosamente');
                 alert('✅ Contexto enviado correctamente al agente');
-            } else {
-                console.error('❌ Error al guardar:', data.message);
+            } else if (status === 200 && data.success === false) {
+                console.error('❌ Error reportado por Salesforce:', data.message);
                 alert('❌ Error: ' + data.message);
+            } else if (status >= 400) {
+                console.error('❌ Error HTTP:', status, data);
+                alert('❌ Error HTTP ' + status + ': ' + (data.message || 'Error desconocido'));
+            } else {
+                console.warn('⚠️ Respuesta inesperada del servidor');
             }
         })
         .catch(error => {
-            console.error('❌ Error de red:', error);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('❌ ERROR DE RED O CORS:');
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('Error:', error);
+            console.error('Mensaje:', error.message);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('ℹ️ Verifica:');
             console.log('1. Clase Apex MessagingContextAPI creada en Salesforce');
             console.log('2. CORS configurado para tu dominio');
