@@ -328,40 +328,76 @@
             
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // OPCIÓN: Enviar el contexto como mensaje automático invisible al agente
-            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
-                FirstName: 'Usuario',
-                LastName: 'Web'
-            };
+            console.log('✓ Configurando chat...');
+            console.log('📋 Contexto capturado:', context);
             
+            // Inicializar el chat
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
                 'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
                 { scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com' }
             );
-           
+            
             console.log('✓ Chat inicializado');
-            console.log('📋 Contexto capturado:', context);
             
-            // Detectar cuando se abre el chat buscando el iframe
-            const checkChatOpened = setInterval(() => {
-                const chatFrame = document.querySelector('iframe[title*="chat" i], iframe[title*="messaging" i]');
+            // Método 1: Intentar acceder al API del chat después de que se cargue
+            setTimeout(() => {
+                console.log('🔍 Buscando API del chat...');
+                console.log('embeddedservice_bootstrap:', embeddedservice_bootstrap);
                 
-                if (chatFrame) {
-                    console.log('🎯 Chat abierto detectado!');
-                    clearInterval(checkChatOpened);
-                    
-                    // Esperar 3 segundos para que Salesforce cree la sesión
-                    setTimeout(() => {
-                        console.log('⏰ Intentando enviar contexto...');
-                        sendContextWithoutSessionId(context);
-                    }, 3000);
+                // Listar todas las propiedades del objeto
+                if (embeddedservice_bootstrap) {
+                    console.log('📦 Propiedades disponibles:', Object.keys(embeddedservice_bootstrap));
+                    console.log('📦 Settings:', embeddedservice_bootstrap.settings);
                 }
-            }, 500);
+                
+                // Buscar objetos relacionados con el chat en window
+                for (let key in window) {
+                    if (key.toLowerCase().includes('embedded') || key.toLowerCase().includes('messaging')) {
+                        console.log(`🔍 Encontrado: window.${key}`, window[key]);
+                    }
+                }
+            }, 2000);
             
-            // Limpiar el intervalo después de 30 segundos
-            setTimeout(() => clearInterval(checkChatOpened), 30000);
+            // Método 2: Detectar cuando se abre el chat (DOM observer)
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // Element node
+                            // Buscar iframe del chat
+                            if (node.tagName === 'IFRAME' || node.querySelector('iframe')) {
+                                const iframe = node.tagName === 'IFRAME' ? node : node.querySelector('iframe');
+                                console.log('🎯 Iframe detectado:', iframe);
+                                console.log('   - src:', iframe.src);
+                                console.log('   - title:', iframe.title);
+                                
+                                // Enviar contexto 4 segundos después de detectar el iframe
+                                setTimeout(() => {
+                                    console.log('⏰ Enviando contexto...');
+                                    sendContextWithoutSessionId(context);
+                                }, 4000);
+                            }
+                            
+                            // Buscar botón del chat o contenedor
+                            if (node.className && typeof node.className === 'string') {
+                                if (node.className.includes('embeddedMessaging') || 
+                                    node.className.includes('embedded-messaging')) {
+                                    console.log('🎯 Contenedor del chat detectado:', node.className);
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            // Observar cambios en el body
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('👀 Observer activado - esperando que abras el chat...');
             
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
