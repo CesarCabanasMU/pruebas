@@ -1,85 +1,89 @@
-// TRIGGER: MessagingSessionTrigger
-// Objeto: MessagingSession
-// Evento: after insert
+// ===== OPCIÓN 2: PLATFORM EVENT =====
 
-trigger MessagingSessionTrigger on MessagingSession (after insert) {
-    MessagingSessionTriggerHandler.handleAfterInsert(Trigger.new);
-}
+// 1. Crear Platform Event en Salesforce:
+//    Setup → Platform Events → New Platform Event
+//    API Name: Messaging_Context__e
+//    Fields:
+//      - Session_Id__c (Text, 18)
+//      - Page_Title__c (Text, 255)
+//      - Page_URL__c (Text, 255)
+//      - User_Language__c (Text, 50)
 
-// HANDLER CLASS: MessagingSessionTriggerHandler
+// 2. Trigger que escucha el Platform Event:
 
-public class MessagingSessionTriggerHandler {
+trigger MessagingContextEventTrigger on Messaging_Context__e (after insert) {
+    List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
+    Set<Id> sessionIds = new Set<Id>();
     
-    public static void handleAfterInsert(List<MessagingSession> newSessions) {
-        // Retrasar la ejecución para que ConversationEntry se cree primero
-        System.enqueueJob(new ProcessMessagingSessionJob(
-            new Map<Id, MessagingSession>(newSessions).keySet()
-        ));
+    for (Messaging_Context__e event : Trigger.new) {
+        if (event.Session_Id__c != null) {
+            sessionIds.add(event.Session_Id__c);
+        }
     }
     
-    // Queueable para procesamiento asíncrono
-    public class ProcessMessagingSessionJob implements System.Queueable {
-        private Set<Id> sessionIds;
+    if (!sessionIds.isEmpty()) {
+        Map<Id, MessagingSession> sessionMap = new Map<Id, MessagingSession>([
+            SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
+            FROM MessagingSession
+            WHERE Id IN :sessionIds
+        ]);
         
-        public ProcessMessagingSessionJob(Set<Id> ids) {
-            this.sessionIds = ids;
-        }
-        
-        public void execute(System.QueueableContext context) {
-            List<MessagingSession> sessionsToUpdate = new List<MessagingSession>();
-            
-            // Consultar ConversationEntry relacionados
-            Map<Id, List<ConversationEntry>> entriesByConversation = new Map<Id, List<ConversationEntry>>();
-            
-            for (ConversationEntry entry : [
-                SELECT Id, ConversationId, Message, EntryTime, ActorType
-                FROM ConversationEntry 
-                WHERE ConversationId IN :sessionIds
-                AND ActorType = 'EndUser'
-                ORDER BY EntryTime ASC
-                LIMIT 100
-            ]) {
-                if (!entriesByConversation.containsKey(entry.ConversationId)) {
-                    entriesByConversation.put(entry.ConversationId, new List<ConversationEntry>());
-                }
-                entriesByConversation.get(entry.ConversationId).add(entry);
-            }
-            
-            // Procesar MessagingSessions
-            for (MessagingSession ms : [
-                SELECT Id, ConversationId, Page_Title__c, Page_URL__c, User_Language__c
-                FROM MessagingSession 
-                WHERE Id IN :sessionIds
-            ]) {
-                List<ConversationEntry> entries = entriesByConversation.get(ms.ConversationId);
-                
-                if (entries != null && !entries.isEmpty()) {
-                    String message = entries[0].Message;
-                    
-                    // Parsear el contexto si existe
-                    if (message != null && message.contains('📊 Contexto')) {
-                        ms.Page_Title__c = extractValue(message, 'Título:');
-                        ms.Page_URL__c = extractValue(message, 'URL:');
-                        ms.User_Language__c = extractValue(message, 'Idioma:');
-                        sessionsToUpdate.add(ms);
-                    }
-                }
-            }
-            
-            if (!sessionsToUpdate.isEmpty()) {
-                update sessionsToUpdate;
+        for (Messaging_Context__e event : Trigger.new) {
+            MessagingSession ms = sessionMap.get(event.Session_Id__c);
+            if (ms != null) {
+                ms.Page_Title__c = event.Page_Title__c;
+                ms.Page_URL__c = event.Page_URL__c;
+                ms.User_Language__c = event.User_Language__c;
+                sessionsToUpdate.add(ms);
             }
         }
         
-        private String extractValue(String text, String label) {
-            if (text == null || !text.contains(label)) return null;
+        if (!sessionsToUpdate.isEmpty()) {
+            update sessionsToUpdate;
+        }
+    }
+}
+
+// ===== OPCIÓN 3: APEX REST SERVICE =====
+
+// Crear Apex REST que reciba los datos desde JavaScript:
+
+@RestResource(urlMapping='/messaging/context/*')
+global class MessagingContextService {
+    
+    @HttpPost
+    global static String receiveContext() {
+        RestRequest req = RestContext.request;
+        Map<String, Object> params = (Map<String, Object>) JSON.deserializeUntyped(req.requestBody.toString());
+        
+        String sessionId = (String) params.get('sessionId');
+        String pageTitle = (String) params.get('pageTitle');
+        String pageURL = (String) params.get('pageURL');
+        String userLanguage = (String) params.get('userLanguage');
+        
+        try {
+            MessagingSession ms = [
+                SELECT Id, Page_Title__c, Page_URL__c, User_Language__c
+                FROM MessagingSession
+                WHERE Id = :sessionId
+                LIMIT 1
+            ];
             
-            Integer startIndex = text.indexOf(label) + label.length();
-            Integer endIndex = text.indexOf('\n', startIndex);
+            ms.Page_Title__c = pageTitle;
+            ms.Page_URL__c = pageURL;
+            ms.User_Language__c = userLanguage;
             
-            if (endIndex == -1) endIndex = text.length();
+            update ms;
             
-            return text.substring(startIndex, endIndex).trim();
+            return JSON.serialize(new Map<String, Object>{
+                'success' => true,
+                'message' => 'Context saved successfully'
+            });
+        } catch (Exception e) {
+            return JSON.serialize(new Map<String, Object>{
+                'success' => false,
+                'error' => e.getMessage()
+            });
         }
     }
 }
