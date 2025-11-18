@@ -328,6 +328,12 @@
             
             embeddedservice_bootstrap.settings.language = 'es';
             
+            // OPCIÓN: Enviar el contexto como mensaje automático invisible al agente
+            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
+                FirstName: 'Usuario',
+                LastName: 'Web'
+            };
+            
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
@@ -336,53 +342,46 @@
             );
            
             console.log('✓ Chat inicializado');
+            console.log('📋 Contexto capturado:', context);
             
-            // Guardar contexto para enviar cuando el usuario envíe el primer mensaje
-            sessionStorage.setItem('webContext', JSON.stringify(context));
-            
-            // Escuchar eventos del chat
-            window.addEventListener('message', (event) => {
-                // Verificar que el mensaje viene del iframe del chat
-                if (event.origin.includes('salesforce')) {
-                    console.log('📨 Mensaje recibido del chat:', event.data);
+            // Detectar cuando se abre el chat buscando el iframe
+            const checkChatOpened = setInterval(() => {
+                const chatFrame = document.querySelector('iframe[title*="chat" i], iframe[title*="messaging" i]');
+                
+                if (chatFrame) {
+                    console.log('🎯 Chat abierto detectado!');
+                    clearInterval(checkChatOpened);
                     
-                    // Intentar capturar el ID de conversación del mensaje
-                    if (event.data && typeof event.data === 'string') {
-                        try {
-                            const data = JSON.parse(event.data);
-                            if (data.conversationId || data.sessionId) {
-                                const sessionId = data.conversationId || data.sessionId;
-                                console.log('🔍 Session ID capturado:', sessionId);
-                                sendContextToSalesforce(sessionId, context);
-                            }
-                        } catch (e) {
-                            // Ignorar si no es JSON
-                        }
-                    }
+                    // Esperar 3 segundos para que Salesforce cree la sesión
+                    setTimeout(() => {
+                        console.log('⏰ Intentando enviar contexto...');
+                        sendContextWithoutSessionId(context);
+                    }, 3000);
                 }
-            });
+            }, 500);
             
-            console.log('📋 Esperando que el usuario abra el chat...');
-            console.log('ℹ️ El contexto se enviará automáticamente cuando se capture el Session ID');
+            // Limpiar el intervalo después de 30 segundos
+            setTimeout(() => clearInterval(checkChatOpened), 30000);
             
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
         }
     }
     
-    // Función para enviar contexto via REST API
-    function sendContextToSalesforce(sessionId, context) {
+    // Nueva función: enviar contexto sin Session ID (usa timestamp para buscar la sesión más reciente)
+    function sendContextWithoutSessionId(context) {
         const endpoint = 'https://onecrminetum--test.sandbox.my.salesforce.com/services/apexrest/messaging/context';
         
         const payload = {
-            sessionId: sessionId,
+            sessionId: null, // El Apex buscará la sesión más reciente
             pageTitle: context.pageTitle,
             pageURL: context.pageUrl,
             userLanguage: context.language,
-            referrer: context.referrer
+            referrer: context.referrer,
+            timestamp: new Date().toISOString()
         };
         
-        console.log('📤 Enviando contexto a Salesforce:', payload);
+        console.log('📤 Enviando contexto a Salesforce (sin Session ID):', payload);
         
         fetch(endpoint, {
             method: 'POST',
@@ -399,10 +398,8 @@
                 server: response.headers.get('server')
             });
             
-            // Guardar el status para usarlo después
             const status = response.status;
             
-            // Intentar parsear la respuesta como JSON
             return response.text().then(text => {
                 console.log('📥 Response Body (raw):', text);
                 try {
@@ -449,6 +446,8 @@
             console.log('3. Site Guest User tiene permisos en MessagingSession');
         });
     }
+    
+
     
     // ========================================
     // 4. UI UPDATE
