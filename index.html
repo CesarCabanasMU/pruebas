@@ -328,15 +328,29 @@
             
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // Configurar hidden pre-chat fields ANTES de init
-            embeddedservice_bootstrap.settings.hiddenPrechatFields = {
-                Page_Title: context.pageTitle,
-                Page_URL: context.pageUrl,
-                User_Language: context.language,
-                Referrer: context.referrer
+            // Configurar mensaje de inicio automático
+            embeddedservice_bootstrap.settings.defaultMinimizedText = '¡Hola! Chatea con nosotros';
+            embeddedservice_bootstrap.settings.disabledMinimizedText = 'Agente offline';
+            
+            // Pre-poblar campos visibles (si tienes pre-chat form)
+            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
+                SuppliedName: 'Visitante Web',
+                SuppliedEmail: '',
             };
             
-            console.log('✅ Hidden fields configurados:', embeddedservice_bootstrap.settings.hiddenPrechatFields);
+            // Agregar información del contexto que será visible
+            embeddedservice_bootstrap.settings.extraPrechatInfo = [{
+                "entityFieldMaps": [{
+                    "doCreate": false,
+                    "doFind": false,
+                    "fieldName": "LastName",
+                    "isExactMatch": false,
+                    "label": "Contexto"
+                }],
+                "entityName": "Contact"
+            }];
+            
+            console.log('✅ Configuración lista. Contexto de la página:', context);
             
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
@@ -345,7 +359,27 @@
                 { scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com' }
             );
            
-            console.log('✓ Chat inicializado con contexto');
+            console.log('✓ Chat inicializado');
+            console.log('📋 INSTRUCCIONES: Cuando abras el chat, copia y pega este contexto como primer mensaje:');
+            console.log(`
+📊 CONTEXTO DE LA PÁGINA:
+• Título: ${context.pageTitle}
+• URL: ${context.pageUrl}
+• Idioma: ${context.language}
+• Referencia: ${context.referrer}
+            `);
+            
+            // Mostrar alerta con el contexto para copiar
+            setTimeout(() => {
+                if (confirm('¿Quieres copiar el contexto de la página al portapapeles para enviarlo al agente?')) {
+                    const contextText = `📊 Contexto:\n• Página: ${context.pageTitle}\n• URL: ${context.pageUrl}\n• Idioma: ${context.language}`;
+                    navigator.clipboard.writeText(contextText).then(() => {
+                        alert('✅ Contexto copiado. Pégalo en el chat cuando lo abras.');
+                    }).catch(() => {
+                        alert('❌ No se pudo copiar. Copia manualmente desde la consola (F12).');
+                    });
+                }
+            }, 3000);
         } catch (err) {
             console.error('❌ Error al inicializar chat:', err);
         }
