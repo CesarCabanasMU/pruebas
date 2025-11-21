@@ -377,52 +377,10 @@
             // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
             
-            // ⭐ PASAR CONTEXTO DE LA PÁGINA AL CHAT ⭐
-            const pageContext = getPageContext();
+            console.log('✓ Configurando chat...');
+            console.log('📋 Contexto capturado:', context);
             
-            // Configurar variables de contexto personalizadas
-            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
-                PageURL__c: pageContext.pageUrl,
-                PageTitle__c: pageContext.pageTitle,
-                PageSection__c: pageContext.pageSection,
-                Referrer__c: pageContext.referrer
-            };
-            
-            // Datos adicionales para el agente (visibles en el chat)
-            embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
-                {
-                    label: "URL de la Página",
-                    value: pageContext.pageUrl,
-                    displayToAgent: true
-                },
-                {
-                    label: "Título de la Página",
-                    value: pageContext.pageTitle,
-                    displayToAgent: true
-                },
-                {
-                    label: "Sección Actual",
-                    value: pageContext.pageSection,
-                    displayToAgent: true
-                },
-                {
-                    label: "Referencia",
-                    value: pageContext.referrer,
-                    displayToAgent: true
-                },
-                {
-                    label: "Idioma",
-                    value: pageContext.language,
-                    displayToAgent: true
-                },
-                {
-                    label: "Resolución",
-                    value: pageContext.screenResolution,
-                    displayToAgent: false
-                }
-            ];
-
-            // Inicializar el servicio
+            // Inicializar el chat
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
@@ -440,29 +398,86 @@
         }
     }
     
-    // ========================================
-    // EVENT LISTENERS
-    // ========================================
+    // Nueva función: enviar contexto sin Session ID (usa timestamp para buscar la sesión más reciente)
+    function sendContextWithoutSessionId(context) {
+        const endpoint = 'https://onecrminetum--test.sandbox.my.salesforce.com/services/apexrest/messaging/context';
+        
+        const payload = {
+            sessionId: null, // El Apex buscará la sesión más reciente
+            pageTitle: context.pageTitle,
+            pageURL: context.pageUrl,
+            userLanguage: context.language,
+            referrer: context.referrer,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log('📤 Enviando contexto a Salesforce (sin Session ID):', payload);
+        
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            console.log('📥 Response Status:', response.status);
+            console.log('📥 Response Headers:', {
+                contentType: response.headers.get('content-type'),
+                date: response.headers.get('date'),
+                server: response.headers.get('server')
+            });
+            
+            const status = response.status;
+            
+            return response.text().then(text => {
+                console.log('📥 Response Body (raw):', text);
+                try {
+                    const data = JSON.parse(text);
+                    console.log('📥 Response Body (parsed):', data);
+                    return { status, data };
+                } catch (e) {
+                    console.warn('⚠️ La respuesta no es JSON válido');
+                    return { status, data: { raw: text } };
+                }
+            });
+        })
+        .then(({ status, data }) => {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📊 RESPUESTA COMPLETA DEL ENDPOINT:');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('Status HTTP:', status);
+            console.log('Datos:', JSON.stringify(data, null, 2));
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            
+            if (status === 200 && data.success) {
+                console.log('✅ Contexto guardado en Salesforce exitosamente');
+                alert('✅ Contexto enviado correctamente al agente');
+            } else if (status === 200 && data.success === false) {
+                console.error('❌ Error reportado por Salesforce:', data.message);
+                alert('❌ Error: ' + data.message);
+            } else if (status >= 400) {
+                console.error('❌ Error HTTP:', status, data);
+                alert('❌ Error HTTP ' + status + ': ' + (data.message || 'Error desconocido'));
+            } else {
+                console.warn('⚠️ Respuesta inesperada del servidor');
+            }
+        })
+        .catch(error => {
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('❌ ERROR DE RED O CORS:');
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('Error:', error);
+            console.error('Mensaje:', error.message);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('ℹ️ Verifica:');
+            console.log('1. Clase Apex MessagingContextAPI creada en Salesforce');
+            console.log('2. CORS configurado para tu dominio');
+            console.log('3. Site Guest User tiene permisos en MessagingSession');
+        });
+    }
     
-    // Actualizar contexto cuando el usuario cambia de sección
-    window.addEventListener('scroll', function() {
-        // Debounce para no ejecutar demasiado frecuentemente
-        clearTimeout(window.scrollTimeout);
-        window.scrollTimeout = setTimeout(function() {
-            sendContextToChat();
-        }, 500);
-    });
-    
-    // Actualizar contexto cuando se abre el chat
-    document.addEventListener('embeddedMessagingReady', function() {
-        console.log('🎯 Chat listo - Enviando contexto actualizado');
-        sendContextToChat();
-    });
-    
-    // Log cuando se inicia una conversación
-    document.addEventListener('embeddedMessagingConversationStart', function() {
-        console.log('💬 Conversación iniciada con contexto:', getPageContext());
-    });
+
     
     // ========================================
     // ACTUALIZAR DISPLAY DE CONTEXTO EN LA PÁGINA
