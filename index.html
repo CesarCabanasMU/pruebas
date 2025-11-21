@@ -130,7 +130,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            cursor: pointer;
         }
 
         .feature-card:hover {
@@ -242,7 +241,7 @@
 
     <div class="container">
         <div class="chat-notice">
-            <strong>ℹ️ Información:</strong> Esta página captura automáticamente el contexto de navegación y lo envía al agente del chat de Salesforce. Los datos incluyen el título de la página, URL e idioma.
+            <strong>ℹ️ Información:</strong> La burbuja del chat estará visible inmediatamente en la esquina inferior derecha. Haz click en ella para abrir una conversación.
         </div>
 
         <!-- Panel de Contexto en Tiempo Real -->
@@ -259,12 +258,20 @@
                 <span id="context-title">Cargando...</span>
             </div>
             <div class="context-item">
+                <strong>📍 Sección Actual:</strong>
+                <span id="context-section">Cargando...</span>
+            </div>
+            <div class="context-item">
                 <strong>🔗 Referencia:</strong>
                 <span id="context-referrer">Cargando...</span>
             </div>
             <div class="context-item">
                 <strong>🌍 Idioma:</strong>
                 <span id="context-language">Cargando...</span>
+            </div>
+            <div class="context-item">
+                <strong>📱 Resolución:</strong>
+                <span id="context-resolution">Cargando...</span>
             </div>
             <div class="context-item">
                 <strong>🕐 Timestamp:</strong>
@@ -277,6 +284,7 @@
         <section class="hero" id="inicio">
             <h2>Bienvenido a nuestra página</h2>
             <p>Esta es una prueba de concepto que demuestra la integración de Salesforce Embedded Messaging. Nuestro agente de chat se activará automáticamente para ayudarte con cualquier pregunta.</p>
+            <button class="cta-button" onclick="alert('¿En qué podemos ayudarte?')">Obtén más información</button>
         </section>
 
         <section id="caracteristicas">
@@ -303,133 +311,193 @@
         <p>Prueba de concepto - GitHub Seeds</p>
     </footer>
 
-    <!-- Salesforce Embedded Messaging Integration -->
     <script type='text/javascript'>
     // ========================================
-    // 1. CAPTURA DE CONTEXTO
+    // FUNCIONES PARA CAPTURAR CONTEXTO DE LA PÁGINA
     // ========================================
     
     function getPageContext() {
-        return {
+        // Capturar información de la página actual
+        const pageContext = {
             pageUrl: window.location.href,
+            pagePath: window.location.pathname,
             pageTitle: document.title,
-            language: navigator.language || navigator.userLanguage,
-            referrer: document.referrer || 'Acceso directo'
+            pageSection: getCurrentSection(),
+            referrer: document.referrer || 'Acceso directo',
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            screenResolution: `${window.screen.width}x${window.screen.height}`,
+            language: navigator.language || navigator.userLanguage
         };
+        
+        console.log('📋 Contexto de página capturado:', pageContext);
+        return pageContext;
+    }
+    
+    function getCurrentSection() {
+        // Detectar en qué sección está el usuario
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPosition = window.scrollY + 100;
+        
+        for (let section of sections) {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.offsetHeight;
+            
+            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                return section.id || 'inicio';
+            }
+        }
+        return 'inicio';
+    }
+    
+    function sendContextToChat() {
+        // Esta función envía el contexto actualizado al chat
+        const context = getPageContext();
+        
+        // Si el chat está disponible, actualizar el contexto
+        if (typeof embeddedservice_bootstrap !== 'undefined') {
+            try {
+                // Método para pasar variables de contexto
+                embeddedservice_bootstrap.contextData = context;
+                console.log('✓ Contexto enviado al chat de Salesforce');
+            } catch (err) {
+                console.warn('No se pudo actualizar el contexto:', err);
+            }
+        }
+        
+        return context;
     }
     
     // ========================================
-    // 2. CONFIGURACIÓN CON PRE-CHAT API
+    // INICIALIZACIÓN DEL CHAT DE SALESFORCE
     // ========================================
     
     function initEmbeddedMessaging() {
         try {
-            const context = getPageContext();
-            
+            // Configurar idioma
             embeddedservice_bootstrap.settings.language = 'es';
             
+            // ⭐ PASAR CONTEXTO DE LA PÁGINA AL CHAT ⭐
+            const pageContext = getPageContext();
+            
+            // Configurar variables de contexto personalizadas
+            embeddedservice_bootstrap.settings.prepopulatedPrechatFields = {
+                PageURL__c: pageContext.pageUrl,
+                PageTitle__c: pageContext.pageTitle,
+                PageSection__c: pageContext.pageSection,
+                Referrer__c: pageContext.referrer
+            };
+            
+            // Datos adicionales para el agente (visibles en el chat)
+            embeddedservice_bootstrap.settings.extraPrechatFormDetails = [
+                {
+                    label: "URL de la Página",
+                    value: pageContext.pageUrl,
+                    displayToAgent: true
+                },
+                {
+                    label: "Título de la Página",
+                    value: pageContext.pageTitle,
+                    displayToAgent: true
+                },
+                {
+                    label: "Sección Actual",
+                    value: pageContext.pageSection,
+                    displayToAgent: true
+                },
+                {
+                    label: "Referencia",
+                    value: pageContext.referrer,
+                    displayToAgent: true
+                },
+                {
+                    label: "Idioma",
+                    value: pageContext.language,
+                    displayToAgent: true
+                },
+                {
+                    label: "Resolución",
+                    value: pageContext.screenResolution,
+                    displayToAgent: false
+                }
+            ];
+
+            // Inicializar el servicio
             embeddedservice_bootstrap.init(
                 '00Dbd000000XkCn',
                 'Github_Messaging_Setting',
                 'https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758',
-                { scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com' }
+                {
+                    scrt2URL: 'https://onecrminetum--test.sandbox.my.salesforce-scrt.com'
+                }
             );
            
-            console.log('✓ Chat inicializado');
-            
-            // Guardar contexto para enviar cuando el usuario envíe el primer mensaje
-            sessionStorage.setItem('webContext', JSON.stringify(context));
-            
-            // Escuchar eventos del chat
-            window.addEventListener('message', (event) => {
-                // Verificar que el mensaje viene del iframe del chat
-                if (event.origin.includes('salesforce')) {
-                    console.log('📨 Mensaje recibido del chat:', event.data);
-                    
-                    // Intentar capturar el ID de conversación del mensaje
-                    if (event.data && typeof event.data === 'string') {
-                        try {
-                            const data = JSON.parse(event.data);
-                            if (data.conversationId || data.sessionId) {
-                                const sessionId = data.conversationId || data.sessionId;
-                                console.log('🔍 Session ID capturado:', sessionId);
-                                sendContextToSalesforce(sessionId, context);
-                            }
-                        } catch (e) {
-                            // Ignorar si no es JSON
-                        }
-                    }
-                }
-            });
-            
-            console.log('📋 Esperando que el usuario abra el chat...');
-            console.log('ℹ️ El contexto se enviará automáticamente cuando se capture el Session ID');
-            
+            console.log('✓ Chat de Salesforce inicializado correctamente');
+            console.log('✓ Contexto de página enviado al agente:', pageContext);
+           
         } catch (err) {
-            console.error('❌ Error al inicializar chat:', err);
+            console.error('❌ Error al inicializar el chat:', err);
         }
     }
     
-    // Función para enviar contexto via REST API
-    function sendContextToSalesforce(sessionId, context) {
-        const endpoint = 'https://onecrminetum--test.sandbox.my.salesforce.com/services/apexrest/messaging/context';
-        
-        const payload = {
-            sessionId: sessionId,
-            pageTitle: context.pageTitle,
-            pageURL: context.pageUrl,
-            userLanguage: context.language,
-            referrer: context.referrer
-        };
-        
-        console.log('📤 Enviando contexto a Salesforce:', payload);
-        
-        fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(response => {
-            console.log('📥 Respuesta HTTP:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                console.log('✅ Contexto guardado en Salesforce:', data);
-                alert('✅ Contexto enviado correctamente al agente');
-            } else {
-                console.error('❌ Error al guardar:', data.message);
-                alert('❌ Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error de red:', error);
-            console.log('ℹ️ Verifica:');
-            console.log('1. Clase Apex MessagingContextAPI creada en Salesforce');
-            console.log('2. CORS configurado para tu dominio');
-            console.log('3. Site Guest User tiene permisos en MessagingSession');
-        });
-    }
+    // ========================================
+    // EVENT LISTENERS
+    // ========================================
+    
+    // Actualizar contexto cuando el usuario cambia de sección
+    window.addEventListener('scroll', function() {
+        // Debounce para no ejecutar demasiado frecuentemente
+        clearTimeout(window.scrollTimeout);
+        window.scrollTimeout = setTimeout(function() {
+            sendContextToChat();
+        }, 500);
+    });
+    
+    // Actualizar contexto cuando se abre el chat
+    document.addEventListener('embeddedMessagingReady', function() {
+        console.log('🎯 Chat listo - Enviando contexto actualizado');
+        sendContextToChat();
+    });
+    
+    // Log cuando se inicia una conversación
+    document.addEventListener('embeddedMessagingConversationStart', function() {
+        console.log('💬 Conversación iniciada con contexto:', getPageContext());
+    });
     
     // ========================================
-    // 4. UI UPDATE
+    // ACTUALIZAR DISPLAY DE CONTEXTO EN LA PÁGINA
     // ========================================
     
     function updateContextDisplay() {
         const context = getPageContext();
         
+        // Actualizar elementos en la página
         document.getElementById('context-url').textContent = context.pageUrl;
         document.getElementById('context-title').textContent = context.pageTitle;
+        document.getElementById('context-section').textContent = context.pageSection;
         document.getElementById('context-referrer').textContent = context.referrer;
         document.getElementById('context-language').textContent = context.language;
-        document.getElementById('context-timestamp').textContent = new Date().toLocaleString('es-ES');
+        document.getElementById('context-resolution').textContent = context.screenResolution;
+        document.getElementById('context-timestamp').textContent = new Date(context.timestamp).toLocaleString('es-ES');
+        
+        console.log('✓ Display de contexto actualizado');
     }
     
-    // Actualizar al cargar
-    window.addEventListener('load', () => setTimeout(updateContextDisplay, 500));
+    // Actualizar el display cuando carga la página
+    window.addEventListener('load', function() {
+        setTimeout(updateContextDisplay, 500);
+    });
+    
+    // Actualizar también al hacer scroll
+    window.addEventListener('scroll', function() {
+        clearTimeout(window.contextDisplayTimeout);
+        window.contextDisplayTimeout = setTimeout(function() {
+            const newSection = getCurrentSection();
+            document.getElementById('context-section').textContent = newSection;
+        }, 300);
+    });
+    
     </script>
-    <script src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
+    <script type='text/javascript' src='https://onecrminetum--test.sandbox.my.site.com/ESWGithubMessagingSetti1759831747758/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
 </body>
 </html>
